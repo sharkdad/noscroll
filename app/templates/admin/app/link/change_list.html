@@ -1,0 +1,26 @@
+{% extends "admin/change_list.html" %}
+
+{% load admin_urls admin_list %}
+{% block object-tools-items %}
+    <li><a href="{% url 'admin:app_link_changelist' %}?is_read__exact=0&o=-4" class="golink">Unread</a></li>
+    <li><a href="{% url 'admin:app_link_changelist' %}?is_saved__exact=1&o=3" class="golink">Saved</a></li>
+    {% change_list_object_tools %}
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<script type="text/javascript">
+const saveButton = document.querySelector("p.paginator input[name='_save']")
+if (saveButton != null) {
+    const saveAndMarkReadButton = document.createElement("input")
+    saveAndMarkReadButton.type = "submit"
+    saveAndMarkReadButton.name = "_save"
+    saveAndMarkReadButton.className = "default"
+    saveAndMarkReadButton.value = "Mark as read and save"
+    saveAndMarkReadButton.style = "margin-right: 10px;"
+    saveAndMarkReadButton.onclick = e =>
+        document.querySelectorAll("td.field-is_read input[type='checkbox']").forEach(e => e.checked = true)
+    saveButton.parentNode.append(saveAndMarkReadButton)
+}
+</script>
+{% endblock %}

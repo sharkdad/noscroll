@@ -1,0 +1,13 @@
+DEBUG = False
+SECRET_KEY = '<secretkey>'
+ALLOWED_HOSTS = ['noscroll.sharkdad.io']
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'noscroll',
+        'USER': 'noscroll',
+        'PASSWORD': '<password>',
+        'HOST': '10.1.1.1',
+        'PORT': '5432',
+    }
+}
