@@ -1,4 +1,5 @@
 FROM python:latest
+RUN pip install --upgrade pip
 WORKDIR /noscroll
 COPY requirements.txt .
 RUN pip install -r requirements.txt
