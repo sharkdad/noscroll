@@ -1,5 +1,7 @@
 TASK_DELAY_SECONDS = 600
 HN_TOP_STORIES = 30
+REDDIT_USER_AGENT = 'script:slothclient:1.0 (by /u/slothtron)'
+REDDIT_TOP_SUBMISSIONS = 100
 
 WSGI_APPLICATION = 'project.wsgi.application'
 ROOT_URLCONF = 'project.urls'
@@ -86,6 +88,6 @@ DATABASES = {
 }
 
 try:
-    from .settings_prod import *
+    from .settings_override import *
 except ImportError:
     pass

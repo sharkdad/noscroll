@@ -131,3 +131,4 @@ mylocal_db/
 logfile
 
 project/settings_prod.py
+project/settings_override.py

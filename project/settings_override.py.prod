@@ -1,5 +1,9 @@
 DEBUG = False
 SECRET_KEY = '<secretkey>'
+REDDIT_CLIENT_ID = ''
+REDDIT_CLIENT_SECRET = ''
+REDDIT_USERNAME = ''
+REDDIT_PASSWORD = ''
 ALLOWED_HOSTS = ['noscroll.sharkdad.io']
 DATABASES = {
     'default': {

@@ -5,7 +5,7 @@ from sched import scheduler
 from threading import Lock, Thread
 from time import sleep
 
-from . import hn
+from . import hn, reddit
 
 TASK_INIT_LOCK = Lock()
 TASK_THREAD = None
@@ -26,6 +26,8 @@ def run_tasks():
             logging.info("Starting task scheduler")
             sched = scheduler()
             keep_task_running(hn.sync_top_stories, sched)
+            keep_task_running(reddit.sync_feeds, sched)
+            keep_task_running(reddit.sync_top_submissions, sched)
             sched.run()
         except:
             logging.exception("Error running task scheduler")
