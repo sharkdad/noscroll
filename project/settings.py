@@ -1,7 +1,12 @@
-TASK_DELAY_SECONDS = 600
+from datetime import timedelta
+
+TASK_DELAY = timedelta(minutes=10)
 HN_TOP_STORIES = 30
 REDDIT_USER_AGENT = 'script:slothclient:1.0 (by /u/slothtron)'
 REDDIT_TOP_SUBMISSIONS = 100
+REDDIT_SCORING_TOP_TIME = "month"
+REDDIT_SCORING_TOP_LIMIT = 10
+REDDIT_SCORING_REFRESH_DELAY = timedelta(days=1)
 
 WSGI_APPLICATION = 'project.wsgi.application'
 ROOT_URLCONF = 'project.urls'
@@ -64,6 +69,28 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] [{levelname}] [{module}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/

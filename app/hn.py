@@ -1,3 +1,4 @@
+import logging
 import requests
 
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ def get_hn_json(path: str) -> Any:
     return response.json()
 
 def sync_top_stories() -> None:
+    logging.info("Syncing top Hacker News stories")
     top_stories: List[int] = get_hn_json("topstories")
     for hn_id in top_stories[:settings.HN_TOP_STORIES]:
         metadata = get_hn_json("item/%d" % hn_id)
@@ -43,3 +45,4 @@ def sync_top_stories() -> None:
             update_fields.append('title')
         if update_fields:
             link.save(update_fields=update_fields)
+    logging.info("Finished syncing top Hacker News stories")

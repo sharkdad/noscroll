@@ -28,12 +28,13 @@ def run_tasks():
             keep_task_running(hn.sync_top_stories, sched)
             keep_task_running(reddit.sync_feeds, sched)
             keep_task_running(reddit.sync_top_submissions, sched)
+            keep_task_running(reddit.refresh_relative_scoring, sched)
             sched.run()
         except:
             logging.exception("Error running task scheduler")
         finally:
-            delay_seconds = settings.TASK_DELAY_SECONDS
-            logging.error("Task scheduler exited unexpectedly, restarting after %d seconds", delay_seconds)
+            delay_seconds = settings.TASK_DELAY.total_seconds()
+            logging.error("Task scheduler exited unexpectedly, restarting after %s seconds", delay_seconds)
             sleep(delay_seconds)
 
 def keep_task_running(task, sched):
@@ -43,5 +44,5 @@ def keep_task_running(task, sched):
         except:
             logging.exception("Error running task")
         finally:
-            sched.enter(settings.TASK_DELAY_SECONDS, 0, run_task)
+            sched.enter(settings.TASK_DELAY.total_seconds(), 0, run_task)
     run_task()

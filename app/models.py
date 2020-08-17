@@ -1,7 +1,7 @@
 import uuid
 
 from django.contrib.postgres.fields import JSONField
-from django.db.models import BigIntegerField, BooleanField, CharField, DateTimeField, IntegerField, IntegerChoices, Manager, ManyToManyField, Model, TextField, UUIDField
+from django.db.models import BigIntegerField, BooleanField, CharField, DateTimeField, IntegerField, IntegerChoices, ManyToManyField, Model, TextField, UUIDField
 
 class FeedType(IntegerChoices):
     REDDIT_FRONT_PAGE = 1
@@ -28,6 +28,7 @@ class Link(Model):
     title = TextField()
     posted_at = DateTimeField()
     score = BigIntegerField(default=0)
+    relative_score = BigIntegerField(default=0)
     is_read = BooleanField(default=False)
     is_saved = BooleanField(default=False)
     metadata = JSONField(default=dict, blank=True)
@@ -40,4 +41,7 @@ class Link(Model):
         else:
             raise Exception("Unknown link type for get_absolute_url")
 
-
+class RelativeScoring(Model):
+    id = CharField(primary_key=True, max_length=100)
+    score = BigIntegerField()
+    last_updated = DateTimeField()
