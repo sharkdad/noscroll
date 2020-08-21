@@ -2,10 +2,11 @@ import logging
 import random
 
 from datetime import datetime, timezone
+from deepdiff import DeepDiff
 from django.conf import settings
 from praw import Reddit
 from statistics import mean
-from typing import MutableMapping
+from typing import Mapping, MutableMapping
 
 from .models import Feed, FeedType, Link, RelativeScoring
 
@@ -36,37 +37,43 @@ def sync_top_submissions():
         else:
             raise Exception("Unknown feed type %s" % feed.feed_type)
         for submission in source.hot(limit=settings.REDDIT_TOP_SUBMISSIONS):
-            scoring = get_or_create_relative_scoring(all_scoring, reddit, submission.subreddit.display_name)
-            relative_score = (submission.score / scoring.score) * 1000
-            link, created = Link.objects.get_or_create(reddit_id=submission.id, defaults={
-                'title': submission.title,
-                'posted_at': datetime.fromtimestamp(submission.created_utc, timezone.utc),
-                'score': submission.score,
-                'relative_score': relative_score,
-                'metadata': {
-                    'is_self': submission.is_self,
-                    'num_comments': submission.num_comments,
-                    'permalink': submission.permalink,
-                    'spoiler': submission.spoiler,
-                    'subreddit': submission.subreddit.display_name,
-                    'url': submission.url,
-                },
-            })
+            link = write_submission(reddit, all_scoring, submission)
             link.feeds.add(feed)
-            if not created:
-                update_fields = []
-                if submission.score != link.score:
-                    link.score = submission.score
-                    update_fields.append('score')
-                if relative_score != link.relative_score:
-                    link.relative_score = relative_score
-                    update_fields.append('relative_score')
-                if submission.title != link.title:
-                    link.title = submission.title
-                    update_fields.append('title')
-                if update_fields:
-                    link.save(update_fields=update_fields)
     logging.info("Finshed syncing top reddit submissions")
+
+def write_submission(reddit, all_scoring, submission) -> Link:
+    scoring = get_or_create_relative_scoring(all_scoring, reddit, submission.subreddit.display_name)
+    relative_score = (submission.score / scoring.score) * 1000
+    metadata = get_submission_metadata(submission.__dict__)
+    link, created = Link.objects.get_or_create(reddit_id=submission.id, defaults={
+        'title': submission.title,
+        'posted_at': datetime.fromtimestamp(submission.created_utc, timezone.utc),
+        'score': relative_score,
+        'metadata': metadata,
+    })
+    if not created:
+        update_fields = []
+        if relative_score != link.score:
+            link.score = relative_score
+            update_fields.append('score')
+        if submission.title != link.title:
+            link.title = submission.title
+            update_fields.append('title')
+        if DeepDiff(metadata, link.metadata):
+            link.metadata = metadata
+            update_fields.append('metadata')
+        if update_fields:
+            link.save(update_fields=update_fields)
+    return link
+
+def get_submission_metadata(data: Mapping) -> Mapping:
+    metadata = {k: data.get(k) for k in ('id', 'is_self', 'is_video', 'is_reddit_media_domain', 'spoiler', 'over_18',
+        'num_comments', 'preview', 'thumbnail', 'thumbnail_height', 'thumbnail_width', 'media', 'media_embed',
+        'secure_media', 'secure_media_embed', 'url', 'permalink', 'gallery_data', 'media_metadata')}
+    subreddit = data['subreddit']
+    metadata['subreddit'] = subreddit if isinstance(subreddit, str) else subreddit.display_name
+    metadata['crosspost_parent_list'] = [get_submission_metadata(p) for p in data.get('crosspost_parent_list', [])]
+    return metadata
 
 def refresh_relative_scoring():
     logging.info("Refreshing reddit relative scoring")
@@ -92,11 +99,3 @@ def build_relative_scoring(reddit: Reddit, subreddit: str) -> RelativeScoring:
     score = mean(s.score for s in top)
     logging.info("Finished building relative scoring for %s" % subreddit)
     return RelativeScoring(id=subreddit, score=score, last_updated=datetime.now(timezone.utc))
-
-def update_all_link_scores():
-    reddit = get_reddit()
-    all_scoring = {s.id: s for s in RelativeScoring.objects.all()}
-    for link in Link.objects.filter(reddit_id__isnull=False):
-        scoring = get_or_create_relative_scoring(all_scoring, reddit, link.metadata['subreddit'])
-        link.relative_score = (link.score / scoring.score) * 1000
-        link.save(update_fields=['relative_score'])

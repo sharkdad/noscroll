@@ -1,0 +1,7 @@
+-r requirements.txt
+django-debug-toolbar==2.2
+django-extensions==3.0.5
+jupyter==1.0.0
+mypy==0.782
+pylint==2.5.3
+pylint-django==2.2.0

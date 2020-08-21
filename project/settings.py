@@ -92,17 +92,13 @@ LOGGING = {
     },
 }
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
+SHELL_PLUS = 'notebook'
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# DEV ONLY - MUST OVERRIDE IN PROD
+
 SECRET_KEY = '!7cg)5gwytb1v64si_kjo!-z884@wu@(=el$el@%-=nht0)oee'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
 ALLOWED_HOSTS = []
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -118,3 +114,6 @@ try:
     from .settings_override import *
 except ImportError:
     pass
+
+if DEBUG:
+    INSTALLED_APPS.append('django_extensions')
