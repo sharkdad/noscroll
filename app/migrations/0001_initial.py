@@ -9,21 +9,28 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Link',
+            name="Link",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False)),
-                ('hn_id', models.BigIntegerField(blank=True, null=True, unique=True)),
-                ('title', models.TextField()),
-                ('posted_at', models.DateTimeField()),
-                ('score', models.BigIntegerField(default=0)),
-                ('is_read', models.BooleanField(default=False)),
-                ('is_saved', models.BooleanField(default=False)),
-                ('metadata', django.contrib.postgres.fields.jsonb.JSONField(default=dict)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, primary_key=True, serialize=False
+                    ),
+                ),
+                ("hn_id", models.BigIntegerField(blank=True, null=True, unique=True)),
+                ("title", models.TextField()),
+                ("posted_at", models.DateTimeField()),
+                ("score", models.BigIntegerField(default=0)),
+                ("is_read", models.BooleanField(default=False)),
+                ("is_saved", models.BooleanField(default=False)),
+                (
+                    "metadata",
+                    django.contrib.postgres.fields.jsonb.JSONField(default=dict),
+                ),
             ],
         ),
     ]

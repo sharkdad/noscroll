@@ -8,31 +8,46 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0001_initial'),
+        ("app", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Feed',
+            name="Feed",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False)),
-                ('feed_type', models.IntegerField(choices=[(1, 'Reddit Front Page'), (2, 'Reddit Multi')])),
-                ('metadata', django.contrib.postgres.fields.jsonb.JSONField(default=dict)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, primary_key=True, serialize=False
+                    ),
+                ),
+                (
+                    "feed_type",
+                    models.IntegerField(
+                        choices=[(1, "Reddit Front Page"), (2, "Reddit Multi")]
+                    ),
+                ),
+                (
+                    "metadata",
+                    django.contrib.postgres.fields.jsonb.JSONField(default=dict),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='link',
-            name='reddit_id',
+            model_name="link",
+            name="reddit_id",
             field=models.CharField(blank=True, max_length=6, null=True),
         ),
         migrations.AlterField(
-            model_name='link',
-            name='metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict),
+            model_name="link",
+            name="metadata",
+            field=django.contrib.postgres.fields.jsonb.JSONField(
+                blank=True, default=dict
+            ),
         ),
         migrations.AddField(
-            model_name='link',
-            name='feeds',
-            field=models.ManyToManyField(to='app.Feed'),
+            model_name="link",
+            name="feeds",
+            field=models.ManyToManyField(to="app.Feed"),
         ),
     ]

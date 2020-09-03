@@ -6,21 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('app', '0002_auto_20200809_1520'),
+        ("app", "0002_auto_20200809_1520"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RelativeScoring',
+            name="RelativeScoring",
             fields=[
-                ('id', models.CharField(max_length=100, primary_key=True, serialize=False)),
-                ('score', models.BigIntegerField()),
-                ('last_updated', models.DateTimeField()),
+                (
+                    "id",
+                    models.CharField(max_length=100, primary_key=True, serialize=False),
+                ),
+                ("score", models.BigIntegerField()),
+                ("last_updated", models.DateTimeField()),
             ],
         ),
         migrations.AddField(
-            model_name='link',
-            name='relative_score',
+            model_name="link",
+            name="relative_score",
             field=models.BigIntegerField(default=0),
         ),
     ]

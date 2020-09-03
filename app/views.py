@@ -1,4 +1,5 @@
 from django.shortcuts import redirect
 
+
 def index(request):
-    return redirect('admin:index')
+    return redirect("admin:index")

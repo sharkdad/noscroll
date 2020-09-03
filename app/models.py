@@ -1,11 +1,24 @@
 import uuid
 
 from django.contrib.postgres.fields import JSONField
-from django.db.models import BigIntegerField, BooleanField, CharField, DateTimeField, IntegerField, IntegerChoices, ManyToManyField, Model, TextField, UUIDField
+from django.db.models import (
+    BigIntegerField,
+    BooleanField,
+    CharField,
+    DateTimeField,
+    IntegerField,
+    IntegerChoices,
+    ManyToManyField,
+    Model,
+    TextField,
+    UUIDField,
+)
+
 
 class FeedType(IntegerChoices):
     REDDIT_FRONT_PAGE = 1
     REDDIT_MULTI = 2
+
 
 class Feed(Model):
     id = UUIDField(primary_key=True, default=uuid.uuid4)
@@ -14,11 +27,12 @@ class Feed(Model):
 
     def __str__(self):
         if self.feed_type == FeedType.REDDIT_FRONT_PAGE:
-            return 'Reddit front page'
+            return "Reddit front page"
         elif self.feed_type == FeedType.REDDIT_MULTI:
-            return 'Multireddit %s' % self.metadata['name']
+            return "Multireddit %s" % self.metadata["name"]
         else:
             raise Exception("Unknown feed type %s" % self.feed_type)
+
 
 class Link(Model):
     id = UUIDField(primary_key=True, default=uuid.uuid4)
@@ -35,11 +49,12 @@ class Link(Model):
 
     def get_absolute_url(self):
         if self.hn_id:
-            return 'https://news.ycombinator.com/item?id=%d' % self.hn_id
+            return "https://news.ycombinator.com/item?id=%d" % self.hn_id
         elif self.reddit_id:
-            return 'https://old.reddit.com%s' % self.metadata['permalink']
+            return "https://old.reddit.com%s" % self.metadata["permalink"]
         else:
             raise Exception("Unknown link type for get_absolute_url")
+
 
 class RelativeScoring(Model):
     id = CharField(primary_key=True, max_length=100)

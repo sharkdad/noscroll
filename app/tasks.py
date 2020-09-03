@@ -10,6 +10,7 @@ from . import hn, reddit
 TASK_INIT_LOCK = Lock()
 TASK_THREAD = None
 
+
 def init_task_thread_middleware(get_response):
     def middleware(request):
         with TASK_INIT_LOCK:
@@ -18,7 +19,9 @@ def init_task_thread_middleware(get_response):
                 TASK_THREAD = Thread(target=run_tasks, daemon=True)
                 TASK_THREAD.start()
         return get_response(request)
+
     return middleware
+
 
 def run_tasks():
     while True:
@@ -34,8 +37,12 @@ def run_tasks():
             logging.exception("Error running task scheduler")
         finally:
             delay_seconds = settings.TASK_DELAY.total_seconds()
-            logging.error("Task scheduler exited unexpectedly, restarting after %s seconds", delay_seconds)
+            logging.error(
+                "Task scheduler exited unexpectedly, restarting after %s seconds",
+                delay_seconds,
+            )
             sleep(delay_seconds)
+
 
 def keep_task_running(task, sched):
     def run_task():
@@ -45,4 +52,5 @@ def keep_task_running(task, sched):
             logging.exception("Error running task")
         finally:
             sched.enter(settings.TASK_DELAY.total_seconds(), 0, run_task)
+
     run_task()
