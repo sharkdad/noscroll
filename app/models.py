@@ -28,10 +28,9 @@ class Feed(Model):
     def __str__(self):
         if self.feed_type == FeedType.REDDIT_FRONT_PAGE:
             return "Reddit front page"
-        elif self.feed_type == FeedType.REDDIT_MULTI:
+        if self.feed_type == FeedType.REDDIT_MULTI:
             return "Multireddit %s" % self.metadata["name"]
-        else:
-            raise Exception("Unknown feed type %s" % self.feed_type)
+        raise Exception("Unknown feed type %s" % self.feed_type)
 
 
 class Link(Model):
@@ -50,10 +49,9 @@ class Link(Model):
     def get_absolute_url(self):
         if self.hn_id:
             return "https://news.ycombinator.com/item?id=%d" % self.hn_id
-        elif self.reddit_id:
+        if self.reddit_id:
             return "https://old.reddit.com%s" % self.metadata["permalink"]
-        else:
-            raise Exception("Unknown link type for get_absolute_url")
+        raise Exception("Unknown link type for get_absolute_url")
 
 
 class RelativeScoring(Model):

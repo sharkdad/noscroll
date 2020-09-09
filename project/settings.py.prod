@@ -1,0 +1,15 @@
+from .settings_base import *  # pylint: disable=wildcard-import,unused-wildcard-import
+
+REDDIT_CLIENT_ID = ""
+REDDIT_CLIENT_SECRET = ""
+REDDIT_USERNAME = ""
+REDDIT_PASSWORD = ""
+
+DEBUG = False
+SECRET_KEY = ""
+ALLOWED_HOSTS = ["noscroll.sharkdad.io"]
+DATABASES["default"].update({
+    "USER": "noscroll",
+    "PASSWORD": "",
+    "HOST": "10.1.1.1",
+})

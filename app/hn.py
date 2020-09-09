@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timezone
 from django.conf import settings
 from requests.adapters import HTTPAdapter
-from typing import Any, Iterable, List, Mapping, Mapping, Optional, Set, Tuple
+from typing import Any, List
 from urllib3.util.retry import Retry
 
 from .models import Link

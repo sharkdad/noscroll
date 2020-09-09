@@ -92,13 +92,6 @@ LOGGING = {
     },
 }
 
-SHELL_PLUS = "notebook"
-
-# DEV ONLY - MUST OVERRIDE IN PROD
-
-SECRET_KEY = "!7cg)5gwytb1v64si_kjo!-z884@wu@(=el$el@%-=nht0)oee"
-DEBUG = True
-ALLOWED_HOSTS = []
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -109,11 +102,3 @@ DATABASES = {
         "PORT": "5432",
     }
 }
-
-try:
-    from .settings_override import *
-except ImportError:
-    pass
-
-if DEBUG:
-    INSTALLED_APPS.append("django_extensions")

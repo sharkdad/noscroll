@@ -1,0 +1,12 @@
+from .settings_base import *  # pylint: disable=wildcard-import,unused-wildcard-import
+
+REDDIT_CLIENT_ID = ''
+REDDIT_CLIENT_SECRET = ''
+REDDIT_USERNAME = ''
+REDDIT_PASSWORD = ''
+
+DEBUG = True
+SECRET_KEY = "!7cg)5gwytb1v64si_kjo!-z884@wu@(=el$el@%-=nht0)oee"
+SHELL_PLUS = "notebook"
+
+INSTALLED_APPS.append("django_extensions")

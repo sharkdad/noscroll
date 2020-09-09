@@ -140,12 +140,12 @@ def get_or_create_relative_scoring(
 
 
 def build_relative_scoring(reddit: Reddit, subreddit: str) -> RelativeScoring:
-    logging.info("Building relative scoring for %s" % subreddit)
+    logging.info("Building relative scoring for %s", subreddit)
     top = reddit.subreddit(subreddit).top(
         settings.REDDIT_SCORING_TOP_TIME, limit=settings.REDDIT_SCORING_TOP_LIMIT
     )
     score = mean(s.score for s in top)
-    logging.info("Finished building relative scoring for %s" % subreddit)
+    logging.info("Finished building relative scoring for %s", subreddit)
     return RelativeScoring(
         id=subreddit, score=score, last_updated=datetime.now(timezone.utc)
     )

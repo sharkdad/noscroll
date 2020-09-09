@@ -1,0 +1,8 @@
+[MASTER]
+load-plugins=pylint_django
+
+[MESSAGES CONTROL]
+disable=C,W0703
+
+[BASIC]
+min-public-methods=1
