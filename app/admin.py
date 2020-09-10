@@ -11,14 +11,25 @@ from .utils import first, get_ext
 
 def linked_title(l: Link):
     text = "[%s] %s" % (l.metadata["subreddit"], l.title) if l.reddit_id else l.title
-    embed = get_embed(l) or ""
-    html = '<a href="{}" target="_blank">{}</a>{}'
-    return format_html(html, l.get_absolute_url(), text, embed)
+    html = '<a href="{}" target="_blank">{}</a>'
+    return format_html(html, l.get_absolute_url(), text)
+
+
+def link_embed(l: Link):
+    html = '</td></tr><tr><td style="text-align: center" colspan=7>{}'
+    return format_html(html, get_embed(l) or "")
 
 
 @register(Link)
 class LinkAdmin(ModelAdmin):
-    list_display = (linked_title, "is_saved", "posted_at", "score", "is_read")
+    list_display = (
+        linked_title,
+        "is_saved",
+        "posted_at",
+        "score",
+        "is_read",
+        link_embed,
+    )
     list_filter = ("is_read", "is_saved", "feeds")
     list_editable = ("is_read", "is_saved")
     list_per_page = 10
