@@ -22,7 +22,7 @@ class LinkAdmin(ModelAdmin):
     list_filter = ("is_read", "is_saved", "feeds")
     list_editable = ("is_read", "is_saved")
     list_per_page = 10
-    search_fields = ("id", "hn_id", "title")
+    search_fields = ("id", "hn_id", "reddit_id", "title")
     actions_on_top = False
     actions_on_bottom = False
 
@@ -35,6 +35,7 @@ def get_embed(link: Link) -> Optional[str]:
         embed_reddit_media_embed,
         embed_gallery_image,
         embed_direct_image_link,
+        embed_imgur_card,
     )
     parents = link.metadata.get("crosspost_parent_list") or []
     embeds = ((f(md) for md in (link.metadata, *parents)) for f in embed_funcs)
@@ -107,7 +108,7 @@ def embed_image(url: str) -> str:
 
 def embed_reddit_media_embed(md: Mapping) -> Optional[str]:
     html = """
-        <div style="position: relative; overflow: hidden; padding-top: {}%">
+        <div class="embed" style="padding-top: {}%">
             {}
         </div>
     """
@@ -123,8 +124,8 @@ def embed_reddit_media_embed(md: Mapping) -> Optional[str]:
 
 def embed_reddit_video_iframe(md: Mapping) -> Optional[str]:
     html = """
-        <div style="position: relative; overflow: hidden; padding-top: {}%">
-            <iframe allowfullscreen scrolling="no" gesture="media" allow="encrypted-media"
+        <div class="embed" style="padding-top: {}%">
+            <iframe class="responsive" allowfullscreen scrolling="no" gesture="media" allow="encrypted-media"
                 src="https://old.reddit.com/mediaembed/{}">
             </iframe>
         </div>
@@ -142,6 +143,22 @@ def get_iframe_padding(md: Mapping) -> Optional[str]:
 def get_reddit_videos(md: Mapping) -> Iterable[Optional[Mapping]]:
     medias = (md.get(k) for k in ("media", "secure_media"))
     return (m.get("reddit_video") for m in medias if m)
+
+
+def embed_imgur_card(md: Mapping) -> Optional[str]:
+    if not (permalink := md.get("permalink")):
+        return None
+    if not (link := md.get("url")):
+        return None
+    if not "imgur.com" in link.lower():
+        return None
+
+    html = """
+        <blockquote class="reddit-card">
+            <a href="https://old.reddit.com{}?ref=share&ref_source=embed"></a>
+        </blockquote>
+    """
+    return format_html(html, permalink)
 
 
 @register(RelativeScoring)
