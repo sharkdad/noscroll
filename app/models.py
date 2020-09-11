@@ -1,6 +1,5 @@
 import uuid
 
-from django.contrib.postgres.fields import JSONField
 from django.db.models import (
     BigIntegerField,
     BooleanField,
@@ -8,6 +7,7 @@ from django.db.models import (
     DateTimeField,
     IntegerField,
     IntegerChoices,
+    JSONField,
     ManyToManyField,
     Model,
     TextField,
