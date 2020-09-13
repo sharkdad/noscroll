@@ -18,6 +18,15 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
 
+REST_FRAMEWORK = {
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+}
+
 INSTALLED_APPS = [
     "app.apps.AppConfig",
     "django.contrib.admin",
@@ -26,6 +35,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_filters",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [

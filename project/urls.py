@@ -1,9 +1,16 @@
 from django.contrib import admin
-from django.urls import path
+from django.shortcuts import redirect
+from django.urls import include, path
 
-from app.views import index
+from app.api import router
+
+svc_urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", include(router.urls)),
+    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+]
 
 urlpatterns = [
-    path("", index),
-    path("admin/", admin.site.urls),
+    path("", lambda _: redirect("admin:index")),
+    path("svc/", include(svc_urlpatterns)),
 ]

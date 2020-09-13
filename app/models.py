@@ -1,4 +1,7 @@
+from typing import Optional
 import uuid
+
+from .embed import get_embed
 
 from django.db.models import (
     BigIntegerField,
@@ -45,6 +48,26 @@ class Link(Model):
     is_read = BooleanField(default=False)
     is_saved = BooleanField(default=False)
     metadata = JSONField(default=dict, blank=True)
+
+    @property
+    def permalink(self) -> str:
+        return self.metadata.get("permalink")
+
+    @property
+    def url(self) -> str:
+        return self.metadata.get("url")
+
+    @property
+    def num_comments(self) -> str:
+        return self.metadata.get("num_comments")
+
+    @property
+    def subreddit(self) -> str:
+        return self.metadata.get("subreddit")
+
+    @property
+    def embed(self) -> Optional[str]:
+        return get_embed(self.metadata)
 
     def get_absolute_url(self):
         if self.hn_id:

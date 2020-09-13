@@ -6,3 +6,6 @@ disable=C,W0703
 
 [BASIC]
 min-public-methods=1
+
+[DESIGN]
+max-parents=15
