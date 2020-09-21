@@ -28,12 +28,16 @@ class Feed(Model):
     feed_type = IntegerField(choices=FeedType.choices)
     metadata = JSONField(default=dict)
 
-    def __str__(self):
+    @property
+    def name(self) -> str:
         if self.feed_type == FeedType.REDDIT_FRONT_PAGE:
             return "Reddit front page"
         if self.feed_type == FeedType.REDDIT_MULTI:
             return "Multireddit %s" % self.metadata["name"]
         raise Exception("Unknown feed type %s" % self.feed_type)
+
+    def __str__(self):
+        return self.name
 
 
 class Link(Model):

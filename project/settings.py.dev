@@ -10,3 +10,6 @@ SECRET_KEY = "!7cg)5gwytb1v64si_kjo!-z884@wu@(=el$el@%-=nht0)oee"
 SHELL_PLUS = "notebook"
 
 INSTALLED_APPS.append("django_extensions")
+
+# Uncomment to log SQL queries
+#LOGGING["loggers"]["django.db.backends"]["level"] = "DEBUG"
