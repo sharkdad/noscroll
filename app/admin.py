@@ -1,7 +1,6 @@
 from django.contrib.admin import ModelAdmin, register
 from django.utils.html import format_html
 
-from .embed import get_embed
 from .models import Link, RelativeScoring
 
 
@@ -12,14 +11,14 @@ def linked_title(l: Link):
 
 
 def link_embed(l: Link):
-    html = '</td></tr><tr><td style="text-align: center" colspan=7>{}'
-    return format_html(html, l.embed or "")
+    html = '</td></tr><tr><td style="text-align: center" colspan=7><div>{}</div>{}'
+    return format_html(html, linked_title(l), l.embed or "")
 
 
 @register(Link)
 class LinkAdmin(ModelAdmin):
     list_display = (
-        linked_title,
+        "id",
         "is_saved",
         "posted_at",
         "score",
