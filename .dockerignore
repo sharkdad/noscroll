@@ -5,4 +5,4 @@ __pycache__
 *.pyd
 venv
 dist
-ui
+ui/node_modules

@@ -15,3 +15,4 @@ sudo docker start $APP_NAME
 sudo docker exec -it $APP_NAME python /noscroll/manage.py migrate --no-input
 
 sudo docker cp $APP_NAME:/noscroll/dist/. dist
+sudo docker cp $APP_NAME:/noscroll/ui/build/. dist
