@@ -15,8 +15,25 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+SITE_ID = 1
 STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
+
+ACCOUNT_SESSION_REMEMBER = True
+SOCIALACCOUNT_STORE_TOKENS = True
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "reddit": {
+        "AUTH_PARAMS": {"duration": "permanent"},
+        "SCOPE": ["identity"],
+        "USER_AGENT": REDDIT_USER_AGENT,
+    }
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
@@ -29,12 +46,17 @@ REST_FRAMEWORK = {
 }
 
 INSTALLED_APPS = [
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.reddit",
     "app.apps.AppConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sites",
     "django.contrib.staticfiles",
     "django_filters",
     "rest_framework",

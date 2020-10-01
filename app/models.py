@@ -1,21 +1,67 @@
-from typing import Optional
+from datetime import datetime
+from typing import Mapping, Optional
 import uuid
+
+from allauth.socialaccount.models import SocialLogin
+from pydantic.dataclasses import dataclass
 
 from .embed import get_embed
 
+from django.db import connection
 from django.db.models import (
     BigIntegerField,
     BooleanField,
+    CASCADE,
     CharField,
     DateTimeField,
     IntegerField,
     IntegerChoices,
     JSONField,
+    Manager,
     ManyToManyField,
     Model,
+    OneToOneField,
     TextField,
     UUIDField,
 )
+
+
+@dataclass
+class Token:
+    token: str
+    token_secret: str
+    expires_at: datetime
+
+
+@dataclass
+class AuthMetadata:
+    tokens: Mapping[str, Token]
+
+
+class ProfileManager(Manager):
+    def write_token(self, user_id: int, login: SocialLogin):
+        if hasattr(user, "profile"):
+            profile = user.profile
+        else:
+            profile = Profile(user=user)
+
+        token = login.token
+        profile.reddit_tokens[login.account.uid] = {
+            "token": token.token,
+            "token_secret": token.token_secret,
+            "expires_at": token.expires_at,
+        }
+        profile.save()
+
+        with connection.cursor() as cursor:
+            cursor.execute("")
+
+
+class Profile(Model):
+    user = OneToOneField(User, primary_key=True, on_delete=CASCADE)
+    auth = JSONField(default=dict)
+
+    objects = ProfileManager()
 
 
 class FeedType(IntegerChoices):
