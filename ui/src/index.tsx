@@ -57,6 +57,13 @@ async function put(
 
 function checkResponse(response: Response): Response {
   if (!response.ok) {
+    if (response.status === 403 || response.status === 401) {
+      var login_url = "/svc/accounts/login"
+      if (window.location.port === "3000") {
+        login_url = `http://localhost:8000${login_url}`
+      }
+      window.location.replace(login_url)
+    }
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }
   return response

@@ -1,21 +1,39 @@
+from datetime import datetime
 from typing import Optional
 import uuid
 
-from .embed import get_embed
-
+from django.conf import settings
 from django.db.models import (
     BigIntegerField,
     BooleanField,
+    CASCADE,
     CharField,
     DateTimeField,
     IntegerField,
     IntegerChoices,
     JSONField,
+    Manager,
     ManyToManyField,
     Model,
+    OneToOneField,
     TextField,
     UUIDField,
 )
+from pydantic.dataclasses import dataclass
+
+from .embed import get_embed
+
+
+@dataclass
+class Token:
+    token: str
+    token_secret: str
+    expires_at: datetime
+
+
+class Profile(Model):
+    user = OneToOneField(settings.AUTH_USER_MODEL, primary_key=True, on_delete=CASCADE)
+    tokens = JSONField(default=dict)
 
 
 class FeedType(IntegerChoices):

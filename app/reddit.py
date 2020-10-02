@@ -6,9 +6,41 @@ from deepdiff import DeepDiff
 from django.conf import settings
 from praw import Reddit
 from statistics import mean
-from typing import Mapping, MutableMapping
+from typing import Callable, Mapping, MutableMapping, Optional, TypeVar
 
-from .models import Feed, FeedType, Link, RelativeScoring
+from .dao import ProfileDao, RelativeScoringDao
+from .models import Feed, FeedType, Link, Profile, RelativeScoring, Token
+from .utils import from_obj, from_timestamp_utc
+
+T = TypeVar("T")
+
+# pylint: disable=protected-access
+def use_reddit(
+    profile: Profile, username: Optional[str], func: Callable[[Reddit], T]
+) -> T:
+    tokens = from_obj(Mapping[str, Token], profile.tokens)  # type: ignore
+    user = username or list(tokens.keys())[0]
+    token = tokens[user]
+
+    reddit = Reddit(
+        user_agent=settings.REDDIT_OAUTH_USER_AGENT,
+        client_id=settings.REDDIT_OAUTH_CLIENT_ID,
+        client_secret=settings.REDDIT_OAUTH_CLIENT_SECRET,
+        refresh_token=token.token_secret,
+    )
+    auth = reddit._core._authorizer
+    auth.access_token = token.token
+    auth.scopes = set(settings.REDDIT_SCOPES)
+    auth._expiration_timestamp = token.expires_at.timestamp()
+    result = func(reddit)
+    if auth.access_token != token.token:
+        token = Token(
+            auth.access_token,
+            auth.refresh_token,
+            from_timestamp_utc(auth._expiration_timestamp),
+        )
+        ProfileDao.write_token(profile.user_id, user, token)
+    return result
 
 
 def get_reddit() -> Reddit:
@@ -118,7 +150,7 @@ def refresh_relative_scoring():
     logging.info("Refreshing reddit relative scoring")
     reddit = get_reddit()
     cutoff = datetime.now(timezone.utc) - settings.REDDIT_SCORING_REFRESH_DELAY
-    for scoring in RelativeScoring.objects.filter(last_updated__lte=cutoff):
+    for scoring in RelativeScoringDao.get_next_to_refresh(cutoff):
         build_relative_scoring(reddit, scoring.id).save()
     logging.info("Finished refreshing reddit relative scoring")
 

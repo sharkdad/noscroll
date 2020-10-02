@@ -3,10 +3,12 @@ from datetime import timedelta
 TASK_DELAY = timedelta(minutes=10)
 HN_TOP_STORIES = 30
 REDDIT_USER_AGENT = "script:slothclient:1.0 (by /u/slothtron)"
+REDDIT_OAUTH_USER_AGENT = "django:slothweb:1.0 (by /u/slothtron)"
 REDDIT_TOP_SUBMISSIONS = 100
 REDDIT_SCORING_TOP_TIME = "month"
 REDDIT_SCORING_TOP_LIMIT = 10
 REDDIT_SCORING_REFRESH_DELAY = timedelta(days=1)
+REDDIT_SCOPES = ["identity", "mysubreddits", "read", "subscribe", "vote"]
 
 WSGI_APPLICATION = "project.wsgi.application"
 ROOT_URLCONF = "project.urls"
@@ -15,11 +17,34 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+SITE_ID = 1
 STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
 
+ACCOUNT_SESSION_REMEMBER = True
+LOGIN_REDIRECT_URL = "/"
+SOCIALACCOUNT_STORE_TOKENS = True
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "app.auth.ProfileAuthenticationBackend",
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "reddit": {
+        "AUTH_PARAMS": {"duration": "permanent"},
+        "SCOPE": REDDIT_SCOPES,
+        "USER_AGENT": REDDIT_OAUTH_USER_AGENT,
+    }
+}
+
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
@@ -29,12 +54,17 @@ REST_FRAMEWORK = {
 }
 
 INSTALLED_APPS = [
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.reddit",
     "app.apps.AppConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sites",
     "django.contrib.staticfiles",
     "django_filters",
     "rest_framework",
@@ -95,12 +125,6 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "django.db.backends": {
-            "level": "INFO",
-            "handlers": ["console"],
         },
     },
     "root": {

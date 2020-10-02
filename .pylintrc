@@ -1,4 +1,5 @@
 [MASTER]
+extension-pkg-whitelist=pydantic
 load-plugins=pylint_django
 
 [MESSAGES CONTROL]

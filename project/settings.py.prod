@@ -2,12 +2,20 @@ from .settings_base import *  # pylint: disable=wildcard-import,unused-wildcard-
 
 REDDIT_CLIENT_ID = ""
 REDDIT_CLIENT_SECRET = ""
+REDDIT_OAUTH_CLIENT_ID = ""
+REDDIT_OAUTH_CLIENT_SECRET = ""
 REDDIT_USERNAME = ""
 REDDIT_PASSWORD = ""
 
+ALLOWED_HOSTS = ["noscroll.sharkdad.io"]
 DEBUG = False
 SECRET_KEY = ""
-ALLOWED_HOSTS = ["noscroll.sharkdad.io"]
+
+SOCIALACCOUNT_PROVIDERS["reddit"]["APP"] = {
+    "client_id": REDDIT_OAUTH_CLIENT_ID,
+    "secret": REDDIT_OAUTH_CLIENT_SECRET,
+}
+
 DATABASES["default"].update({
     "USER": "noscroll",
     "PASSWORD": "",
