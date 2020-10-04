@@ -1,6 +1,6 @@
-from django.conf import settings
 from praw import Reddit
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
@@ -8,19 +8,34 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .models import Feed, Link
-from .reddit import use_reddit
+from .reddit import use_anon_reddit, use_oauth_reddit, get_submissions
+from .utils import to_json
 
 # pylint: disable=no-self-use
 class SubmissionViewSet(ViewSet):
+    permission_classes = [AllowAny]
+
     def list(self, request: Request):
         username = request.query_params.get("user")
+        subreddit = request.query_params.get("subreddit")
+        after = request.query_params.get("after")
 
-        def get_submissions(reddit: Reddit):
-            hot = reddit.front.hot(limit=settings.REDDIT_TOP_SUBMISSIONS)
-            return [{"id": s.id} for s in hot]
+        params = {}
+        if after:
+            params["after"] = after
 
-        results = use_reddit(request.user.profile, username, get_submissions)
-        return Response(results)
+        def get_results(reddit: Reddit):
+            feed = reddit.subreddit(subreddit) if subreddit else reddit.front
+            return get_submissions(reddit, feed.hot(limit=10, params=params))
+
+        results = (
+            use_oauth_reddit(request.user.profile, username, get_results)
+            if request.user.is_authenticated
+            else use_anon_reddit(get_results)
+        )
+        from json import loads
+
+        return Response({"results": loads(to_json(results))})
 
 
 class LinkSerializer(ModelSerializer):

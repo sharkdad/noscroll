@@ -23,6 +23,17 @@ from pydantic.dataclasses import dataclass
 
 from .embed import get_embed
 
+@dataclass
+class Submission:
+    id: str
+    title: str
+    posted_at: datetime
+    subreddit: str
+    score: int
+    url: str
+    permalink: str
+    num_comments: int
+    embed: Optional[str]
 
 @dataclass
 class Token:

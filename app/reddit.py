@@ -6,16 +6,25 @@ from deepdiff import DeepDiff
 from django.conf import settings
 from praw import Reddit
 from statistics import mean
-from typing import Callable, Mapping, MutableMapping, Optional, TypeVar
+from typing import (
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Optional,
+    TypeVar,
+)
 
 from .dao import ProfileDao, RelativeScoringDao
-from .models import Feed, FeedType, Link, Profile, RelativeScoring, Token
+from .embed import get_embed
+from .models import Feed, FeedType, Link, Profile, RelativeScoring, Submission, Token
 from .utils import from_obj, from_timestamp_utc
 
 T = TypeVar("T")
 
 # pylint: disable=protected-access
-def use_reddit(
+def use_oauth_reddit(
     profile: Profile, username: Optional[str], func: Callable[[Reddit], T]
 ) -> T:
     tokens = from_obj(Mapping[str, Token], profile.tokens)  # type: ignore
@@ -41,6 +50,36 @@ def use_reddit(
         )
         ProfileDao.write_token(profile.user_id, user, token)
     return result
+
+
+def use_anon_reddit(func: Callable[[Reddit], T]) -> T:
+    reddit = Reddit(
+        user_agent=settings.REDDIT_OAUTH_USER_AGENT,
+        client_id=settings.REDDIT_OAUTH_CLIENT_ID,
+        client_secret=settings.REDDIT_OAUTH_CLIENT_SECRET,
+    )
+    return func(reddit)
+
+
+def get_submissions(reddit: Reddit, subs: Iterator) -> Iterable[Submission]:
+    all_scoring = {s.id: s for s in RelativeScoring.objects.all()}
+    for submission in subs:
+        scoring = get_or_create_relative_scoring(
+            all_scoring, reddit, submission.subreddit.display_name
+        )
+        relative_score = (submission.score / scoring.score) * 1000
+        metadata = get_submission_metadata(submission.__dict__)
+        yield Submission(
+            id=submission.name,
+            title=submission.title,
+            posted_at=from_timestamp_utc(submission.created_utc),
+            subreddit=metadata["subreddit"],
+            score=relative_score,
+            url=submission.url,
+            permalink=submission.permalink,
+            num_comments=submission.num_comments,
+            embed=get_embed(metadata),
+        )
 
 
 def get_reddit() -> Reddit:

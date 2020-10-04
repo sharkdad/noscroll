@@ -114,9 +114,11 @@ def embed_reddit_video_iframe(md: Mapping) -> Optional[str]:
 
 
 def get_iframe_padding(md: Mapping) -> Optional[str]:
-    height = md.get("height")
-    width = md.get("width")
-    return f"{100 * height / width:.2f}" if height and width else None
+    # TODO: fix this shit
+    return "0"
+    # height = md.get("height")
+    # width = md.get("width")
+    # return f"{(100 * height / width):.2f}" if height and width else None
 
 
 def get_reddit_videos(md: Mapping) -> Iterable[Optional[Mapping]]:

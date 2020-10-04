@@ -10,3 +10,4 @@ min-public-methods=1
 
 [DESIGN]
 max-parents=15
+max-attributes=20

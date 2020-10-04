@@ -57,13 +57,6 @@ async function put(
 
 function checkResponse(response: Response): Response {
   if (!response.ok) {
-    if (response.status === 403 || response.status === 401) {
-      var login_url = "/svc/accounts/login"
-      if (window.location.port === "3000") {
-        login_url = `http://localhost:8000${login_url}`
-      }
-      window.location.replace(login_url)
-    }
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }
   return response
@@ -127,7 +120,7 @@ const LinkListFunc = ({ links }) => (
           </div>
         </div>
         {link.embed && (
-          <span
+          <section
             className="d-inline-block mt-2"
             dangerouslySetInnerHTML={{ __html: link.embed }}
           />
@@ -145,9 +138,10 @@ const AllFeedsPlaceholder: Feed = {
 
 function LinkLoader() {
   var { feedId } = useParams()
+  var { subreddit } = useParams()
 
   const [feeds, setFeeds] = useState([AllFeedsPlaceholder])
-  const [nextLoad, setNextLoad] = useState({ readLinks: [], feedId })
+  const [nextLoad, setNextLoad] = useState({ readLinks: [], subreddit })
   const [results, setResults] = useState([] as any[])
 
   var currFeed = feeds.find((feed) => feed.id === feedId)
@@ -166,27 +160,30 @@ function LinkLoader() {
 
   useEffect(
     wrapAsync(async () => {
-      if (feedId !== nextLoad.feedId) {
+      if (subreddit !== nextLoad.subreddit) {
         setResults([])
-        setNextLoad({ readLinks: [], feedId })
+        setNextLoad({ readLinks: [], subreddit })
         return
+      }
+
+      const searchParams = new URLSearchParams()
+
+      if (subreddit != null) {
+        searchParams.set("subreddit", subreddit)
       }
 
       if (nextLoad.readLinks.length > 0) {
         const readLinkIds = nextLoad.readLinks.map((link) => link.id)
-        await put("/svc/api/links/mark_read/", { link_ids: readLinkIds })
+        //await put("/svc/api/links/mark_read/", { link_ids: readLinkIds })
+
+        searchParams.set("after", readLinkIds[readLinkIds.length - 1])
       }
 
-      var queryparams = "is_read=false&ordering=-score"
-      if (feedId != null) {
-        queryparams += `&feeds=${feedId}`
-      }
-
-      const response = await get(`/svc/api/links/?${queryparams}`)
+      const response = await get(`/svc/api/submissions/?${searchParams}`)
       const result = await response.json()
       setResults((r) => [...r, result])
     }),
-    [nextLoad, feedId]
+    [nextLoad, subreddit]
   )
 
   function loadMore() {
@@ -256,6 +253,8 @@ function ThemeSelectorFunc() {
 
 enableTheme()
 
+const SVC_WEB_ROOT = window.location.port === "3000" ? "http://localhost:8000" : ""
+
 ReactDOM.render(
   <React.StrictMode>
     <Router>
@@ -263,9 +262,16 @@ ReactDOM.render(
         <div className="container d-flex flex-column align-items-center">
           <h1>noscroll</h1>
         </div>
+        <div className="mb-3">
+          <a href={`${SVC_WEB_ROOT}/svc/accounts/login/`} className="btn btn-primary mr-2">Login</a>
+          <a href={`${SVC_WEB_ROOT}/svc/accounts/logout/`} className="btn btn-primary">Logout</a>
+        </div>
         <ThemeSelectorFunc />
         <Switch>
-          <Route path="/:feedId?/">
+          <Route path="/" exact>
+            <LinkLoader />
+          </Route>
+          <Route path="/r/:subreddit/" exact>
             <LinkLoader />
           </Route>
         </Switch>

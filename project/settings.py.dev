@@ -10,7 +10,7 @@ REDDIT_PASSWORD = ""
 DEBUG = True
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 INTERNAL_IPS = ["127.0.0.1"]
-LOGIN_REDIRECT_URL = "http://localhost:3000/"
+LOGIN_REDIRECT_URL = LOGOUT_REDIRECT_URL = "http://localhost:3000/"
 SECRET_KEY = "!7cg)5gwytb1v64si_kjo!-z884@wu@(=el$el@%-=nht0)oee"
 SHELL_PLUS = "notebook"
 
