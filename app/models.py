@@ -9,6 +9,7 @@ from django.db.models import (
     CASCADE,
     CharField,
     DateTimeField,
+    ForeignKey,
     IntegerField,
     IntegerChoices,
     JSONField,
@@ -17,11 +18,13 @@ from django.db.models import (
     Model,
     OneToOneField,
     TextField,
+    UniqueConstraint,
     UUIDField,
 )
 from pydantic.dataclasses import dataclass
 
 from .embed import get_embed
+
 
 @dataclass
 class Submission:
@@ -35,6 +38,7 @@ class Submission:
     num_comments: int
     embed: Optional[str]
 
+
 @dataclass
 class Token:
     token: str
@@ -45,6 +49,17 @@ class Token:
 class Profile(Model):
     user = OneToOneField(settings.AUTH_USER_MODEL, primary_key=True, on_delete=CASCADE)
     tokens = JSONField(default=dict)
+
+
+class SeenSubmission(Model):
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    user = ForeignKey(settings.AUTH_USER_MODEL, on_delete=CASCADE)
+    submission_id = CharField(max_length=6)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=["user", "submission_id"], name="unique_seen")
+        ]
 
 
 class FeedType(IntegerChoices):

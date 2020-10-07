@@ -70,7 +70,7 @@ def get_submissions(reddit: Reddit, subs: Iterator) -> Iterable[Submission]:
         relative_score = (submission.score / scoring.score) * 1000
         metadata = get_submission_metadata(submission.__dict__)
         yield Submission(
-            id=submission.name,
+            id=submission.id,
             title=submission.title,
             posted_at=from_timestamp_utc(submission.created_utc),
             subreddit=metadata["subreddit"],

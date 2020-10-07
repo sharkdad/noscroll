@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
+from .dao import SeenSubmissionDao
 from .models import Feed, Link
 from .reddit import use_anon_reddit, use_oauth_reddit, get_submissions
 from .utils import to_json
@@ -19,23 +20,45 @@ class SubmissionViewSet(ViewSet):
         username = request.query_params.get("user")
         subreddit = request.query_params.get("subreddit")
         after = request.query_params.get("after")
+        multi_owner = request.query_params.get("multi_owner")
+        multi_name = request.query_params.get("multi_name")
 
         params = {}
         if after:
-            params["after"] = after
+            params["after"] = f"t3_{after}"
 
         def get_results(reddit: Reddit):
-            feed = reddit.subreddit(subreddit) if subreddit else reddit.front
-            return get_submissions(reddit, feed.hot(limit=10, params=params))
+            def get_feed():
+                if subreddit:
+                    return reddit.subreddit(subreddit)
+                if multi_owner and multi_name:
+                    return reddit.multireddit(multi_owner, multi_name)
+                return reddit.front
+
+            return get_submissions(reddit, get_feed().hot(limit=100, params=params))
 
         results = (
             use_oauth_reddit(request.user.profile, username, get_results)
             if request.user.is_authenticated
             else use_anon_reddit(get_results)
         )
+
+        if request.user.is_authenticated:
+            results_list = list(results)
+            ids = (r.id for r in results_list)
+            seen_ids = set(SeenSubmissionDao.get_seen_ids(request.user.id, ids))
+            results = (r for r in results_list if r.id not in seen_ids)
+
         from json import loads
 
         return Response({"results": loads(to_json(results))})
+
+    @action(detail=False, methods=["put"])
+    def mark_seen(self, request):
+        if request.user.is_authenticated:
+            ids = request.data.get("ids") or []
+            SeenSubmissionDao.mark_seen(request.user.id, ids)
+        return Response()
 
 
 class LinkSerializer(ModelSerializer):

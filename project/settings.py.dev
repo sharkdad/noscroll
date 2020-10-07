@@ -7,6 +7,7 @@ REDDIT_OAUTH_CLIENT_SECRET = ""
 REDDIT_USERNAME = ""
 REDDIT_PASSWORD = ""
 
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"
 DEBUG = True
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 INTERNAL_IPS = ["127.0.0.1"]

@@ -3,7 +3,7 @@ from typing import Iterable
 
 from django.db import connection
 
-from .models import Profile, RelativeScoring, Token
+from .models import Profile, RelativeScoring, SeenSubmission, Token
 from .utils import to_json
 
 
@@ -27,3 +27,17 @@ class RelativeScoringDao:
     @classmethod
     def get_next_to_refresh(cls, cutoff: datetime) -> Iterable[RelativeScoring]:
         return cls.manager.filter(last_updated__lte=cutoff).order_by("last_updated")[:1]
+
+
+class SeenSubmissionDao:
+    manager = SeenSubmission.objects
+
+    @classmethod
+    def get_seen_ids(cls, user_id: str, ids: Iterable[str]) -> Iterable[str]:
+        query = cls.manager.filter(user_id=user_id, submission_id__in=ids)
+        return query.values_list("submission_id", flat=True)
+
+    @classmethod
+    def mark_seen(cls, user_id: str, ids: Iterable[str]) -> None:
+        seen = (SeenSubmission(user_id=user_id, submission_id=s) for s in ids)
+        cls.manager.bulk_create(seen, ignore_conflicts=True)

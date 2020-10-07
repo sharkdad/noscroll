@@ -95,54 +95,67 @@ const FeedSelectorFunc = (props: FeedSelectorProps) => (
 )
 const FeedSelector = memo(FeedSelectorFunc)
 
-const LinkListFunc = ({ links }) => (
-  <>
-    {links.map((link) => (
-      <div key={link.id} className="d-flex flex-column align-items-center mb-5">
-        <div className="container d-flex flex-column align-items-center">
-          <b>
-            <a rel="noopener noreferrer" target="_blank" href={link.url}>
-              {link.title}
-            </a>
-          </b>
-          <div>
-            <small>
-              {link.subreddit} -{" "}
-              <a
-                rel="noopener noreferrer"
-                target="_blank"
-                href={`https://old.reddit.com${link.permalink}`}
-              >
-                {link.num_comments} comments
+const SubmissionDisplayFunc = ({ submission }) => (
+  <div className="d-flex flex-column align-items-center mb-5">
+    <div className="container d-flex flex-column align-items-center">
+      <b>
+        <a rel="noopener noreferrer" target="_blank" href={submission.url}>
+          {submission.title}
+        </a>
+      </b>
+      <div>
+        <small>
+          {submission.subreddit} -{" "}
+          <a
+            rel="noopener noreferrer"
+            target="_blank"
+            href={`https://old.reddit.com${submission.permalink}`}
+          >
+            {submission.num_comments} comments
               </a>{" "}
-              - {link.posted_at} - {link.score}
-            </small>
-          </div>
-        </div>
-        {link.embed && (
-          <section
-            className="d-inline-block mt-2"
-            dangerouslySetInnerHTML={{ __html: link.embed }}
-          />
-        )}
+              - {submission.posted_at} - {submission.score}
+        </small>
       </div>
-    ))}
-  </>
+    </div>
+    {submission.embed && (
+      <section
+        className="d-inline-block mt-2"
+        dangerouslySetInnerHTML={{ __html: submission.embed }}
+      />
+    )}
+  </div>
 )
-const LinkList = memo(LinkListFunc)
+const SubmissionDisplay = memo(SubmissionDisplayFunc)
 
 const AllFeedsPlaceholder: Feed = {
   id: "",
   name: "All",
 }
 
+interface LoadId {
+  subreddit?: string
+  multiOwner?: string
+  multiName?: string
+}
+
+interface LoadState {
+  id?: LoadId
+  after?: string
+}
+
+interface ResultsState {
+  submissions: any[]
+}
+
 function LinkLoader() {
-  var { feedId } = useParams()
-  var { subreddit } = useParams()
+  const pageSize = 10
+
+  var { feedId, subreddit, multiOwner, multiName } = useParams()
 
   const [feeds, setFeeds] = useState([AllFeedsPlaceholder])
-  const [nextLoad, setNextLoad] = useState({ readLinks: [], subreddit })
-  const [results, setResults] = useState([] as any[])
+  const [nextLoad, setNextLoad] = useState<LoadState>({})
+  const [results, setResults] = useState<ResultsState>({ submissions: [] })
+  const [pageIndex, setPageIndex] = useState(0)
 
   var currFeed = feeds.find((feed) => feed.id === feedId)
   if (currFeed == null) {
@@ -160,46 +173,70 @@ function LinkLoader() {
 
   useEffect(
     wrapAsync(async () => {
-      if (subreddit !== nextLoad.subreddit) {
-        setResults([])
-        setNextLoad({ readLinks: [], subreddit })
+      setResults({ submissions: [] })
+      setNextLoad({ id: { subreddit, multiOwner, multiName } })
+    }),
+    [subreddit, multiOwner, multiName]
+  )
+
+  useEffect(
+    wrapAsync(async () => {
+      const loadId = nextLoad.id
+      if (loadId == null) {
         return
       }
 
       const searchParams = new URLSearchParams()
 
-      if (subreddit != null) {
-        searchParams.set("subreddit", subreddit)
+      if (loadId.subreddit != null) {
+        searchParams.set("subreddit", loadId.subreddit)
       }
 
-      if (nextLoad.readLinks.length > 0) {
-        const readLinkIds = nextLoad.readLinks.map((link) => link.id)
-        //await put("/svc/api/links/mark_read/", { link_ids: readLinkIds })
+      if (loadId.multiOwner != null && loadId.multiName != null) {
+        searchParams.set("multi_owner", loadId.multiOwner)
+        searchParams.set("multi_name", loadId.multiName)
+      }
 
-        searchParams.set("after", readLinkIds[readLinkIds.length - 1])
+      if (nextLoad.after != null) {
+        searchParams.set("after", nextLoad.after)
       }
 
       const response = await get(`/svc/api/submissions/?${searchParams}`)
       const result = await response.json()
-      setResults((r) => [...r, result])
+      setResults(lastResults => ({ submissions: [...lastResults.submissions, ...result.results] }))
     }),
-    [nextLoad, subreddit]
+    [nextLoad]
   )
 
   function loadMore() {
-    setNextLoad((nl) => ({
-      ...nl,
-      readLinks: results[results.length - 1].results,
-    }))
+    markAsRead()
+    const newPageIndex = pageIndex + 1
+    setPageIndex(newPageIndex)
+
+    const nextPageIndex = newPageIndex + 1
+    if ((nextPageIndex + 1) * pageSize > results.submissions.length) {
+      const lastSubmission = results.submissions[results.submissions.length - 1]
+      if (lastSubmission == null) {
+        return
+      }
+      setNextLoad(nl => ({ ...nl, after: lastSubmission.id }))
+    }
   }
+
+  const markAsRead = wrapAsync(async () => {
+    const start = pageIndex * pageSize
+    const end = (pageIndex + 1) * pageSize
+    const ids = results.submissions.slice(start, end).map(s => s.id)
+    await put("/svc/api/submissions/mark_seen/", { ids })
+  })
 
   return (
     <>
       <FeedSelector feeds={feeds} currFeed={currFeed} />
-      {results.map((result, index) => (
-        <LinkList links={result.results} key={index} />
+      {results.submissions.slice(0, (pageIndex + 1) * pageSize).map(submission => (
+        <SubmissionDisplay key={submission.id} submission={submission} />
       ))}
-      {results.length > 0 && (
+      {results.submissions.length > 0 && (
         <button
           type="button"
           className="btn btn-primary mb-5"
@@ -272,6 +309,9 @@ ReactDOM.render(
             <LinkLoader />
           </Route>
           <Route path="/r/:subreddit/" exact>
+            <LinkLoader />
+          </Route>
+          <Route path="/m/:multiOwner/:multiName/" exact>
             <LinkLoader />
           </Route>
         </Switch>
