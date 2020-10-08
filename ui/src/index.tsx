@@ -112,8 +112,8 @@ const SubmissionDisplayFunc = ({ submission }) => (
             href={`https://old.reddit.com${submission.permalink}`}
           >
             {submission.num_comments} comments
-              </a>{" "}
-              - {submission.posted_at} - {submission.score}
+          </a>{" "}
+          - {submission.posted_at} - {submission.score}
         </small>
       </div>
     </div>
@@ -203,7 +203,9 @@ function LinkLoader() {
 
       const response = await get(`/svc/api/submissions/?${searchParams}`)
       const result = await response.json()
-      setResults(lastResults => ({ submissions: [...lastResults.submissions, ...result.results] }))
+      setResults((lastResults) => ({
+        submissions: [...lastResults.submissions, ...result.results],
+      }))
     }),
     [nextLoad]
   )
@@ -219,23 +221,25 @@ function LinkLoader() {
       if (lastSubmission == null) {
         return
       }
-      setNextLoad(nl => ({ ...nl, after: lastSubmission.id }))
+      setNextLoad((nl) => ({ ...nl, after: lastSubmission.id }))
     }
   }
 
   const markAsRead = wrapAsync(async () => {
     const start = pageIndex * pageSize
     const end = (pageIndex + 1) * pageSize
-    const ids = results.submissions.slice(start, end).map(s => s.id)
+    const ids = results.submissions.slice(start, end).map((s) => s.id)
     await put("/svc/api/submissions/mark_seen/", { ids })
   })
 
   return (
     <>
       <FeedSelector feeds={feeds} currFeed={currFeed} />
-      {results.submissions.slice(0, (pageIndex + 1) * pageSize).map(submission => (
-        <SubmissionDisplay key={submission.id} submission={submission} />
-      ))}
+      {results.submissions
+        .slice(0, (pageIndex + 1) * pageSize)
+        .map((submission) => (
+          <SubmissionDisplay key={submission.id} submission={submission} />
+        ))}
       {results.submissions.length > 0 && (
         <button
           type="button"
@@ -270,40 +274,115 @@ function enableTheme(): void {
   }
 }
 
-function toggleLightModeEnabled(): void {
-  if (isLightModeEnabled()) {
-    localStorage.removeItem(LIGHT_MODE_KEY)
-  } else {
-    localStorage.setItem(LIGHT_MODE_KEY, "true")
-  }
-  enableTheme()
-}
-
 function ThemeSelectorFunc() {
+  function toggleLightModeEnabled(): void {
+    if (isLightModeEnabled()) {
+      localStorage.removeItem(LIGHT_MODE_KEY)
+    } else {
+      localStorage.setItem(LIGHT_MODE_KEY, "true")
+    }
+    enableTheme()
+  }
+
   return (
     <div className="custom-control custom-switch">
-      <input type="checkbox" className="custom-control-input" id={LIGHT_MODE_KEY} defaultChecked={isLightModeEnabled()} onClick={toggleLightModeEnabled} />
-      <label className="custom-control-label" htmlFor={LIGHT_MODE_KEY}>Light mode</label>
+      <input
+        type="checkbox"
+        className="custom-control-input"
+        id={LIGHT_MODE_KEY}
+        defaultChecked={isLightModeEnabled()}
+        onClick={toggleLightModeEnabled}
+      />
+      <label className="custom-control-label" htmlFor={LIGHT_MODE_KEY}>
+        Light mode
+      </label>
     </div>
   )
 }
+const ThemeSelector = memo(ThemeSelectorFunc)
+
+const SVC_WEB_ROOT =
+  window.location.port === "3000" ? "http://localhost:8000" : ""
+
+const Navbar = memo(() => {
+  return (
+    <nav className="navbar fixed-top navbar-expand-lg navbar-dark bg-dark py-2">
+      <div className="container">
+        <a className="navbar-brand" href="#">
+          noscroll
+        </a>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        <div className="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul className="navbar-nav mr-auto">
+            <li className="nav-item active dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                id="navbarDropdown"
+                role="button"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                Home <span className="sr-only">(current)</span>
+              </a>
+              <div className="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a className="dropdown-item" href="#">
+                  Action
+                </a>
+                <a className="dropdown-item" href="#">
+                  Another action
+                </a>
+                <div className="dropdown-divider"></div>
+                <a className="dropdown-item" href="#">
+                  Something else here
+                </a>
+              </div>
+            </li>
+          </ul>
+          <form className="form-inline">
+            <div className="input-group py-2 py-lg-0 mr-sm-2">
+              <ThemeSelector />
+            </div>
+            <div className="input-group py-2 py-lg-0">
+              <a
+                href={`${SVC_WEB_ROOT}/svc/accounts/login/`}
+                className="btn btn-primary mr-2"
+              >
+                Login
+              </a>
+              <a
+                href={`${SVC_WEB_ROOT}/svc/accounts/logout/`}
+                className="btn btn-primary"
+              >
+                Logout
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </nav>
+  )
+})
 
 enableTheme()
-
-const SVC_WEB_ROOT = window.location.port === "3000" ? "http://localhost:8000" : ""
 
 ReactDOM.render(
   <React.StrictMode>
     <Router>
-      <div className="container-fluid d-flex flex-column align-items-center">
-        <div className="container d-flex flex-column align-items-center">
-          <h1>noscroll</h1>
-        </div>
-        <div className="mb-3">
-          <a href={`${SVC_WEB_ROOT}/svc/accounts/login/`} className="btn btn-primary mr-2">Login</a>
-          <a href={`${SVC_WEB_ROOT}/svc/accounts/logout/`} className="btn btn-primary">Logout</a>
-        </div>
-        <ThemeSelectorFunc />
+      <Navbar />
+      <div className="container-fluid d-flex flex-column align-items-center mt-5">
         <Switch>
           <Route path="/" exact>
             <LinkLoader />
