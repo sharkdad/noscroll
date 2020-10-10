@@ -1,12 +1,15 @@
-import React, { useState, useEffect, memo } from "react"
+import React, { useState, useEffect, memo, useContext } from "react"
 import { useParams } from "react-router-dom"
+import { AppContext, SortBy, TimeFilter } from "./app"
 import { wrapAsync, put, get } from "./utils"
-
 
 export function LinkLoader() {
   const pageSize = 10
 
-  var { subreddit, multiOwner, multiName } = useParams()
+  const { state } = useContext(AppContext)
+  const { reddit_user, sort_method, time_filter } = state
+
+  const { subreddit, multiOwner, multiName } = useParams()
 
   const [nextLoad, setNextLoad] = useState<LoadState>({})
   const [results, setResults] = useState<ResultsState>({ submissions: [] })
@@ -15,9 +18,19 @@ export function LinkLoader() {
   useEffect(
     wrapAsync(async () => {
       setResults({ submissions: [] })
-      setNextLoad({ id: { subreddit, multiOwner, multiName } })
+      setPageIndex(0)
+      setNextLoad({
+        id: {
+          reddit_user,
+          subreddit,
+          multiOwner,
+          multiName,
+          sort_method,
+          time_filter,
+        },
+      })
     }),
-    [subreddit, multiOwner, multiName]
+    [reddit_user, subreddit, multiOwner, multiName, sort_method, time_filter]
   )
 
   useEffect(
@@ -28,6 +41,11 @@ export function LinkLoader() {
       }
 
       const searchParams = new URLSearchParams()
+      searchParams.set("user", loadId.reddit_user)
+      searchParams.set("sort", loadId.sort_method.name)
+      if (loadId.sort_method.has_time_filter) {
+        searchParams.set("time", loadId.time_filter.name)
+      }
 
       if (loadId.subreddit != null) {
         searchParams.set("subreddit", loadId.subreddit)
@@ -93,11 +111,13 @@ export function LinkLoader() {
   )
 }
 
-
 interface LoadId {
+  reddit_user: string
   subreddit?: string
   multiOwner?: string
   multiName?: string
+  sort_method: SortBy
+  time_filter: TimeFilter
 }
 
 interface LoadState {

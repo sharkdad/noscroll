@@ -28,7 +28,7 @@ def use_oauth_reddit(
     profile: Profile, username: Optional[str], func: Callable[[Reddit], T]
 ) -> T:
     tokens = from_obj(Mapping[str, Token], profile.tokens)  # type: ignore
-    user = username or list(tokens.keys())[0]
+    user = username or sorted(tokens.keys())[0]
     token = tokens[user]
 
     reddit = Reddit(

@@ -8,9 +8,22 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .dao import SeenSubmissionDao
-from .models import Feed, Link
+from .models import AppDetails, Feed, Link, SubmissionResults
 from .reddit import use_anon_reddit, use_oauth_reddit, get_submissions
-from .utils import to_json
+
+
+# pylint: disable=no-self-use
+class AppDetailsViewSet(ViewSet):
+    permission_classes = [AllowAny]
+
+    def list(self, request: Request):
+        reddit_users = (
+            sorted(request.user.profile.tokens.keys())
+            if request.user.is_authenticated
+            else []
+        )
+        return Response(AppDetails(request.user.is_authenticated, reddit_users))
+
 
 # pylint: disable=no-self-use
 class SubmissionViewSet(ViewSet):
@@ -22,6 +35,15 @@ class SubmissionViewSet(ViewSet):
         after = request.query_params.get("after")
         multi_owner = request.query_params.get("multi_owner")
         multi_name = request.query_params.get("multi_name")
+        sort = request.query_params.get("sort")
+        time = request.query_params.get("time")
+
+        allowed_sort = set(("hot", "top", "new", "rising", "controversial"))
+        sort = sort if sort in allowed_sort else "hot"
+
+        if time:
+            allowed_time = set(("all", "year", "month", "day", "hour"))
+            time = time if time in allowed_time else "all"
 
         params = {}
         if after:
@@ -35,7 +57,10 @@ class SubmissionViewSet(ViewSet):
                     return reddit.multireddit(multi_owner, multi_name)
                 return reddit.front
 
-            return get_submissions(reddit, get_feed().hot(limit=100, params=params))
+            listing = getattr(get_feed(), sort)
+            args = (time,) if time else ()
+            items = listing(*args, limit=100, params=params)
+            return list(get_submissions(reddit, items))
 
         results = (
             use_oauth_reddit(request.user.profile, username, get_results)
@@ -44,14 +69,11 @@ class SubmissionViewSet(ViewSet):
         )
 
         if request.user.is_authenticated:
-            results_list = list(results)
-            ids = (r.id for r in results_list)
+            ids = (r.id for r in results)
             seen_ids = set(SeenSubmissionDao.get_seen_ids(request.user.id, ids))
-            results = (r for r in results_list if r.id not in seen_ids)
+            results = [r for r in results if r.id not in seen_ids]
 
-        from json import loads
-
-        return Response({"results": loads(to_json(results))})
+        return Response(SubmissionResults(results))
 
     @action(detail=False, methods=["put"])
     def mark_seen(self, request):
@@ -105,6 +127,7 @@ class FeedViewSet(ReadOnlyModelViewSet):
 
 
 router = DefaultRouter()
+router.register("app", AppDetailsViewSet, "App")
 router.register("feeds", FeedViewSet)
 router.register("links", LinkViewSet)
 router.register("submissions", SubmissionViewSet, "Submission")

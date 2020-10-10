@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 import uuid
 
 from django.conf import settings
@@ -27,6 +27,12 @@ from .embed import get_embed
 
 
 @dataclass
+class AppDetails:
+    is_authenticated: bool
+    reddit_users: List[str]
+
+
+@dataclass
 class Submission:
     id: str
     title: str
@@ -37,6 +43,11 @@ class Submission:
     permalink: str
     num_comments: int
     embed: Optional[str]
+
+
+@dataclass
+class SubmissionResults:
+    results: List[Submission]
 
 
 @dataclass
