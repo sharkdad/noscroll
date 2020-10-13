@@ -99,13 +99,15 @@ export function LinkLoader() {
           <SubmissionDisplay key={submission.id} submission={submission} />
         ))}
       {results.submissions.length > 0 && (
-        <button
-          type="button"
-          className="btn btn-primary mb-5"
-          onClick={loadMore}
-        >
-          Load more
-        </button>
+        <div className="d-flex flex-column align-items-center">
+          <button
+            type="button"
+            className="btn btn-primary mb-5"
+            onClick={loadMore}
+          >
+            Load more
+          </button>
+        </div>
       )}
     </>
   )
@@ -134,14 +136,14 @@ interface SubmissionDisplayProps {
 }
 
 const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
-  <div className="d-flex flex-column align-items-center mb-5">
-    <div className="container d-flex flex-column align-items-center">
+  <>
+    <div className="container text-center">
       <b>
         <a rel="noopener noreferrer" target="_blank" href={submission.url}>
           {submission.title}
         </a>
       </b>
-      <div>
+      <p>
         <small>
           {submission.subreddit} -{" "}
           <a
@@ -153,13 +155,13 @@ const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
           </a>{" "}
           - {submission.posted_at} - {submission.score}
         </small>
-      </div>
+      </p>
     </div>
     {submission.embed && (
-      <section
-        className="d-inline-block mt-2"
+      <div className="w-100 text-center"
         dangerouslySetInnerHTML={{ __html: submission.embed }}
       />
     )}
-  </div>
+    <div className="mb-5"/>
+  </>
 ))

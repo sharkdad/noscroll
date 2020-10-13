@@ -71,20 +71,15 @@ def use_anon_reddit(func: Callable[[Reddit], T]) -> T:
     return func(reddit)
 
 
-def get_submissions(reddit: Reddit, subs: Iterator) -> Iterable[Submission]:
-    all_scoring = {s.id: s for s in RelativeScoring.objects.all()}
+def get_submissions(subs: Iterator) -> Iterable[Submission]:
     for submission in subs:
-        scoring = get_or_create_relative_scoring(
-            all_scoring, reddit, submission.subreddit.display_name
-        )
-        relative_score = (submission.score / scoring.score) * 1000
         metadata = get_submission_metadata(submission.__dict__)
         yield Submission(
             id=submission.id,
             title=submission.title,
             posted_at=from_timestamp_utc(submission.created_utc),
             subreddit=metadata["subreddit"],
-            score=relative_score,
+            score=submission.score,
             url=submission.url,
             permalink=submission.permalink,
             num_comments=submission.num_comments,

@@ -103,7 +103,7 @@ export function App() {
             <Switch>
               <Route exact path={["/", "/r/:subreddit/", "/user/:multiOwner/m/:multiName/"]}>
                 <Navbar />
-                <div className="container-fluid d-flex flex-column align-items-center mt-5 pt-4">
+                <div className="container-fluid mt-5 pt-4">
                   <LinkLoader />
                 </div>
               </Route>

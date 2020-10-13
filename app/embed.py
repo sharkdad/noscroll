@@ -87,15 +87,23 @@ def embed_image(url: str) -> str:
 
 def embed_reddit_media_embed(md: Mapping) -> Optional[str]:
     html = """
-        <div class="embed" style="padding-top: {}%">
-            {}
+        <div class="mx-auto" style="max-width: {}vh">
+            <div class="embed" style="padding-top: {}%">
+                {}
+            </div>
         </div>
     """
 
     def media_embed(embed: Mapping) -> Optional[str]:
         if not (content := embed.get("content")):
             return None
-        return format_html(html, get_iframe_padding(embed), mark_safe(content))
+
+        w = embed.get("width")
+        h = embed.get("height")
+        padding = f"{(100 * (h / w)):.2f}"
+        maxWidth = f"{(80 * (w / h)):.2f}"
+
+        return format_html(html, maxWidth, padding, mark_safe(content))
 
     embeds = (md.get(e) for e in ("media_embed", "secure_media_embed"))
     return first((media_embed(e) for e in embeds if e))
@@ -114,11 +122,9 @@ def embed_reddit_video_iframe(md: Mapping) -> Optional[str]:
 
 
 def get_iframe_padding(md: Mapping) -> Optional[str]:
-    # TODO: fix this shit
-    return "0"
-    # height = md.get("height")
-    # width = md.get("width")
-    # return f"{(100 * height / width):.2f}" if height and width else None
+    height = md.get("height")
+    width = md.get("width")
+    return f"{(100 * height / width):.2f}" if height and width else None
 
 
 def get_reddit_videos(md: Mapping) -> Iterable[Optional[Mapping]]:

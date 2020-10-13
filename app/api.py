@@ -62,7 +62,7 @@ class SubmissionViewSet(ViewSet):
             listing = getattr(get_feed(), sort)
             args = (time,) if time else ()
             items = listing(*args, limit=100, params=params)
-            return list(get_submissions(reddit, items))
+            return list(get_submissions(items))
 
         results = (
             use_oauth_reddit(request.user.profile, username, get_results)
