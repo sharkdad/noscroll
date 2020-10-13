@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from deepdiff import DeepDiff
 from django.conf import settings
 from praw import Reddit
+from praw.models import Multireddit
 from statistics import mean
 from typing import (
     Callable,
@@ -18,7 +19,16 @@ from typing import (
 
 from .dao import ProfileDao, RelativeScoringDao
 from .embed import get_embed
-from .models import Feed, FeedType, Link, Profile, RelativeScoring, Submission, Token
+from .models import (
+    Feed,
+    FeedType,
+    Link,
+    Multi,
+    Profile,
+    RelativeScoring,
+    Submission,
+    Token,
+)
 from .utils import from_obj, from_timestamp_utc
 
 T = TypeVar("T")
@@ -80,6 +90,13 @@ def get_submissions(reddit: Reddit, subs: Iterator) -> Iterable[Submission]:
             num_comments=submission.num_comments,
             embed=get_embed(metadata),
         )
+
+
+def get_multis(reddit: Reddit) -> Iterable[Multi]:
+    def create_multi(multi: Multireddit) -> Multi:
+        return Multi(multi.owner, multi.name, multi.display_name)
+
+    return (create_multi(m) for m in reddit.user.me().multireddits())
 
 
 def get_reddit() -> Reddit:

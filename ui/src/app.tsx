@@ -15,9 +15,16 @@ export interface TimeFilter {
   label: string
 }
 
+export interface Multi {
+  owner: string
+  name: string
+  display_name: string
+}
+
 export interface AppDetails {
   is_authenticated: boolean
   reddit_users: string[]
+  multis: Multi[]
 }
 
 export interface AppState {
@@ -71,9 +78,13 @@ export function App() {
 
   useEffect(
     wrapAsync(async () => {
-      const response = await get(`/svc/api/app/`)
-      const details: AppDetails = await response.json()
       const saved_user = localStorage.getItem(REDDIT_USER_KEY)
+      const searchParams = new URLSearchParams()
+      if (saved_user) {
+        searchParams.set("user", saved_user)
+      }
+      const response = await get(`/svc/api/app/?${searchParams}`)
+      const details: AppDetails = await response.json()
       const reddit_user = details.reddit_users.includes(saved_user)
         ? saved_user
         : details.reddit_users[0]
@@ -89,20 +100,14 @@ export function App() {
       <Router>
         {state && (
           <AppContext.Provider value={globals}>
-            <Navbar />
-            <div className="container-fluid d-flex flex-column align-items-center mt-5 pt-4">
-              <Switch>
-                <Route path="/" exact>
+            <Switch>
+              <Route exact path={["/", "/r/:subreddit/", "/user/:multiOwner/m/:multiName/"]}>
+                <Navbar />
+                <div className="container-fluid d-flex flex-column align-items-center mt-5 pt-4">
                   <LinkLoader />
-                </Route>
-                <Route path="/r/:subreddit/" exact>
-                  <LinkLoader />
-                </Route>
-                <Route path="/m/:multiOwner/:multiName/" exact>
-                  <LinkLoader />
-                </Route>
-              </Switch>
-            </div>
+                </div>
+              </Route>
+            </Switch>
           </AppContext.Provider>
         )}
       </Router>

@@ -27,9 +27,17 @@ from .embed import get_embed
 
 
 @dataclass
+class Multi:
+    owner: str
+    name: str
+    display_name: str
+
+
+@dataclass
 class AppDetails:
     is_authenticated: bool
     reddit_users: List[str]
+    multis: List[Multi]
 
 
 @dataclass

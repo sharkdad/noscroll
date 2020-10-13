@@ -9,7 +9,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .dao import SeenSubmissionDao
 from .models import AppDetails, Feed, Link, SubmissionResults
-from .reddit import use_anon_reddit, use_oauth_reddit, get_submissions
+from .reddit import get_multis, use_anon_reddit, use_oauth_reddit, get_submissions
 
 
 # pylint: disable=no-self-use
@@ -17,12 +17,14 @@ class AppDetailsViewSet(ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request: Request):
-        reddit_users = (
-            sorted(request.user.profile.tokens.keys())
-            if request.user.is_authenticated
-            else []
-        )
-        return Response(AppDetails(request.user.is_authenticated, reddit_users))
+        if request.user.is_authenticated:
+            username = request.query_params.get("user")
+            multis = list(use_oauth_reddit(request.user.profile, username, get_multis))
+            reddit_users = sorted(request.user.profile.tokens.keys())
+        else:
+            multis = []
+            reddit_users = []
+        return Response(AppDetails(request.user.is_authenticated, reddit_users, multis))
 
 
 # pylint: disable=no-self-use

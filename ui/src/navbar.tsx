@@ -2,8 +2,13 @@ import React, { useContext } from "react"
 import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
 import { SVC_WEB_ROOT } from "./utils"
+import { useParams, useHistory } from "react-router-dom"
 
 export function Navbar() {
+  const history = useHistory()
+  const { subreddit, multiOwner, multiName } = useParams()
+  const feed = (subreddit || multiOwner || multiName) ? window.location.pathname : "Home"
+
   const {
     state,
     sort_methods,
@@ -13,7 +18,7 @@ export function Navbar() {
     set_time_filter,
   } = useContext(AppContext)
   const { details, reddit_user, sort_method, time_filter } = state
-  const reddit_users = details.reddit_users
+  const { reddit_users, multis } = details
   const other_users = reddit_users.filter((u) => u !== reddit_user)
   const other_sort_methods = sort_methods.filter(
     (s) => s.name !== sort_method.name
@@ -41,6 +46,57 @@ export function Navbar() {
 
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav mr-auto">
+            <li className="nav-item active dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                id="feedDropdown"
+                role="button"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                {feed}
+              </a>
+              <div className="dropdown-menu" aria-labelledby="feedDropdown">
+                <button
+                  key="home"
+                  type="button"
+                  className="dropdown-item"
+                  onClick={() => history.push("/")}
+                >
+                  Home
+                </button>
+                <div className="dropdown-divider" />
+                <button
+                  key="all"
+                  type="button"
+                  className="dropdown-item"
+                  onClick={() => history.push("/r/all/")}
+                >
+                  r/all/
+                </button>
+                <button
+                  key="popular"
+                  type="button"
+                  className="dropdown-item"
+                  onClick={() => history.push("/r/popular/")}
+                >
+                  r/popular/
+                </button>
+                <div className="dropdown-divider" />
+                {multis.map((multi) => (
+                  <button
+                    key={`${multi.owner}_${multi.name}`}
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => history.push(`/user/${multi.owner}/m/${multi.name}/`)}
+                  >
+                    {multi.display_name}
+                  </button>
+                ))}
+              </div>
+            </li>
             <li className="nav-item active dropdown">
               <a
                 className="nav-link dropdown-toggle"
