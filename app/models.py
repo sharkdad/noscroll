@@ -13,7 +13,6 @@ from django.db.models import (
     IntegerField,
     IntegerChoices,
     JSONField,
-    Manager,
     ManyToManyField,
     Model,
     OneToOneField,

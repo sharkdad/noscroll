@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useContext } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useLocation } from "react-router-dom"
 import { AppContext, SortBy, TimeFilter } from "./app"
 import { wrapAsync, put, get } from "./utils"
 
@@ -10,6 +10,7 @@ export function LinkLoader() {
   const { reddit_user, sort_method, time_filter } = state
 
   const { subreddit, multiOwner, multiName } = useParams()
+  const { search } = useLocation()
 
   const [nextLoad, setNextLoad] = useState<LoadState>({})
   const [results, setResults] = useState<ResultsState>({ submissions: [] })
@@ -27,10 +28,11 @@ export function LinkLoader() {
           multiName,
           sort_method,
           time_filter,
+          search,
         },
       })
     }),
-    [reddit_user, subreddit, multiOwner, multiName, sort_method, time_filter]
+    [reddit_user, subreddit, multiOwner, multiName, sort_method, time_filter, search]
   )
 
   useEffect(
@@ -58,6 +60,11 @@ export function LinkLoader() {
 
       if (nextLoad.after != null) {
         searchParams.set("after", nextLoad.after)
+      }
+
+      if (loadId.search) {
+        new URLSearchParams(loadId.search).forEach(
+          (value, key) => searchParams.set(key, value))
       }
 
       const response = await get(`/svc/api/submissions/?${searchParams}`)
@@ -120,6 +127,7 @@ interface LoadId {
   multiName?: string
   sort_method: SortBy
   time_filter: TimeFilter
+  search: string
 }
 
 interface LoadState {
@@ -162,6 +170,6 @@ const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
         dangerouslySetInnerHTML={{ __html: submission.embed }}
       />
     )}
-    <div className="mb-5"/>
+    <div className="mb-5" />
   </>
 ))

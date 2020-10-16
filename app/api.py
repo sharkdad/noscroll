@@ -1,4 +1,6 @@
+from typing import Callable, List
 from praw import Reddit
+from praw.models import Submission
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -27,53 +29,74 @@ class AppDetailsViewSet(ViewSet):
         return Response(AppDetails(request.user.is_authenticated, reddit_users, multis))
 
 
+ALLOWED_SORT = set(("hot", "top", "new", "rising", "controversial"))
+ALLOWED_TIME = set(("all", "year", "month", "day", "hour"))
+
+
+def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submission]]:
+    subreddit = request.query_params.get("subreddit")
+    after = request.query_params.get("after")
+    multi_owner = request.query_params.get("multi_owner")
+    multi_name = request.query_params.get("multi_name")
+    sort = request.query_params.get("sort")
+    time = request.query_params.get("time")
+
+    sort = sort if sort in ALLOWED_SORT else "hot"
+
+    if time:
+        time = time if time in ALLOWED_TIME else "all"
+
+    params = {}
+    if after:
+        params["after"] = f"t3_{after}"
+
+    def get_results(reddit: Reddit) -> List[Submission]:
+        def get_feed():
+            if subreddit:
+                return reddit.subreddit(subreddit)
+            if multi_owner and multi_name:
+                return reddit.multireddit(multi_owner, multi_name)
+            return reddit.front
+
+        listing = getattr(get_feed(), sort)
+        args = (time,) if time else ()
+        results = list(listing(*args, limit=100, params=params))
+        if request.user.is_authenticated:
+            ids = (r.id for r in results)
+            seen_ids = set(SeenSubmissionDao.get_seen_ids(request.user.id, ids))
+            results = [r for r in results if r.id not in seen_ids]
+        return results
+
+    return get_results
+
+
+def get_submissions_by_id(reddit_ids: str) -> Callable[[Reddit], List[Submission]]:
+    def get_results(reddit: Reddit) -> List[Submission]:
+        fullnames = (f"t3_{id}" for id in reddit_ids.split(","))
+        return list(reddit.info(fullnames))
+
+    return get_results
+
+
 # pylint: disable=no-self-use
 class SubmissionViewSet(ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request: Request):
         username = request.query_params.get("user")
-        subreddit = request.query_params.get("subreddit")
-        after = request.query_params.get("after")
-        multi_owner = request.query_params.get("multi_owner")
-        multi_name = request.query_params.get("multi_name")
-        sort = request.query_params.get("sort")
-        time = request.query_params.get("time")
+        reddit_ids = request.query_params.get("reddit_ids")
 
-        allowed_sort = set(("hot", "top", "new", "rising", "controversial"))
-        sort = sort if sort in allowed_sort else "hot"
+        get_results = (
+            get_submissions_by_id(reddit_ids)
+            if reddit_ids
+            else get_submissions_listing(request)
+        )
 
-        if time:
-            allowed_time = set(("all", "year", "month", "day", "hour"))
-            time = time if time in allowed_time else "all"
-
-        params = {}
-        if after:
-            params["after"] = f"t3_{after}"
-
-        def get_results(reddit: Reddit):
-            def get_feed():
-                if subreddit:
-                    return reddit.subreddit(subreddit)
-                if multi_owner and multi_name:
-                    return reddit.multireddit(multi_owner, multi_name)
-                return reddit.front
-
-            listing = getattr(get_feed(), sort)
-            args = (time,) if time else ()
-            items = listing(*args, limit=100, params=params)
-            return list(get_submissions(items))
-
-        results = (
+        results = list(get_submissions(
             use_oauth_reddit(request.user.profile, username, get_results)
             if request.user.is_authenticated
             else use_anon_reddit(get_results)
-        )
-
-        if request.user.is_authenticated:
-            ids = (r.id for r in results)
-            seen_ids = set(SeenSubmissionDao.get_seen_ids(request.user.id, ids))
-            results = [r for r in results if r.id not in seen_ids]
+        ))
 
         return Response(SubmissionResults(results))
 

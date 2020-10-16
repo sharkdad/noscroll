@@ -5,12 +5,11 @@ from datetime import datetime, timezone
 from deepdiff import DeepDiff
 from django.conf import settings
 from praw import Reddit
-from praw.models import Multireddit
+import praw.models
 from statistics import mean
 from typing import (
     Callable,
     Iterable,
-    Iterator,
     Mapping,
     MutableMapping,
     Optional,
@@ -71,7 +70,7 @@ def use_anon_reddit(func: Callable[[Reddit], T]) -> T:
     return func(reddit)
 
 
-def get_submissions(subs: Iterator) -> Iterable[Submission]:
+def get_submissions(subs: Iterable[praw.models.Submission]) -> Iterable[Submission]:
     for submission in subs:
         metadata = get_submission_metadata(submission.__dict__)
         yield Submission(
@@ -88,7 +87,7 @@ def get_submissions(subs: Iterator) -> Iterable[Submission]:
 
 
 def get_multis(reddit: Reddit) -> Iterable[Multi]:
-    def create_multi(multi: Multireddit) -> Multi:
+    def create_multi(multi: praw.models.Multireddit) -> Multi:
         return Multi(multi.owner, multi.name, multi.display_name)
 
     return (create_multi(m) for m in reddit.user.me().multireddits())
