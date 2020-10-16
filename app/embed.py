@@ -87,8 +87,8 @@ def embed_image(url: str) -> str:
 
 def embed_reddit_media_embed(md: Mapping) -> Optional[str]:
     html = """
-        <div class="mx-auto" style="max-width: {}vh">
-            <div class="embed" style="padding-top: {}%">
+        <div class="mx-auto" style="max-width: {}">
+            <div class="embed" style="padding-top: {}">
                 {}
             </div>
         </div>
@@ -100,8 +100,8 @@ def embed_reddit_media_embed(md: Mapping) -> Optional[str]:
 
         w = embed.get("width")
         h = embed.get("height")
-        padding = f"{(100 * (h / w)):.2f}"
-        maxWidth = f"{(80 * (w / h)):.2f}"
+        padding = f"{(100 * (h / w)):.2f}%"
+        maxWidth = f"{w}px"
 
         return format_html(html, maxWidth, padding, mark_safe(content))
 

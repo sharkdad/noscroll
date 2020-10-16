@@ -16,7 +16,7 @@ div.embed {
   overflow: hidden;
 }
 
-div.embed iframe {
+div.embed > * {
   position: absolute;
   top: 0;
   left: 0;
