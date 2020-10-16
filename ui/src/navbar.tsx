@@ -1,13 +1,13 @@
-import React, { useContext } from "react"
+import React, { memo, useContext } from "react"
 import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
 import { SVC_WEB_ROOT } from "./utils"
-import { useParams, useHistory } from "react-router-dom"
+import { useParams, useHistory, useLocation } from "react-router-dom"
 
 export function Navbar() {
   const history = useHistory()
-  const { subreddit, multiOwner, multiName } = useParams()
-  const feed = (subreddit || multiOwner || multiName) ? window.location.pathname : "Home"
+  const location = useLocation()
+  const { multiOwner, multiName } = useParams()
 
   const {
     state,
@@ -19,13 +19,15 @@ export function Navbar() {
   } = useContext(AppContext)
   const { details, reddit_user, sort_method, time_filter } = state
   const { reddit_users, multis } = details
-  const other_users = reddit_users.filter((u) => u !== reddit_user)
-  const other_sort_methods = sort_methods.filter(
-    (s) => s.name !== sort_method.name
-  )
-  const other_time_filters = time_filters.filter(
-    (t) => t.name !== time_filter.name
-  )
+
+  var feed = location.pathname
+  const feedMulti = multis.find(m => m.owner === multiOwner && m.name === multiName)
+  if (feedMulti) {
+    feed = feedMulti.display_name
+  } else if (feed === "/") {
+    feed = "Home"
+  }
+
   return (
     <nav className="navbar fixed-top navbar-expand-lg navbar-dark bg-dark py-2">
       <div className="container">
@@ -59,42 +61,22 @@ export function Navbar() {
                 {feed}
               </a>
               <div className="dropdown-menu" aria-labelledby="feedDropdown">
-                <button
-                  key="home"
-                  type="button"
-                  className="dropdown-item"
-                  onClick={() => history.push("/")}
-                >
-                  Home
-                </button>
+                <FeedButton pathname="/" label="Home" history={history} location={location} />
+                <FeedButton pathname="/r/all/" history={history} location={location} />
+                <FeedButton pathname="/r/popular/" history={history} location={location} />
                 <div className="dropdown-divider" />
-                <button
-                  key="all"
-                  type="button"
-                  className="dropdown-item"
-                  onClick={() => history.push("/r/all/")}
-                >
-                  r/all/
-                </button>
-                <button
-                  key="popular"
-                  type="button"
-                  className="dropdown-item"
-                  onClick={() => history.push("/r/popular/")}
-                >
-                  r/popular/
-                </button>
-                <div className="dropdown-divider" />
-                {multis.map((multi) => (
-                  <button
-                    key={`${multi.owner}_${multi.name}`}
-                    type="button"
-                    className="dropdown-item"
-                    onClick={() => history.push(`/user/${multi.owner}/m/${multi.name}/`)}
-                  >
-                    {multi.display_name}
-                  </button>
-                ))}
+                {multis.map((multi) => {
+                  const pathname = `/user/${multi.owner}/m/${multi.name}/`
+                  return (
+                    <FeedButton
+                      key={pathname}
+                      pathname={pathname}
+                      label={multi.display_name}
+                      history={history}
+                      location={location}
+                    />
+                  )
+                })}
               </div>
             </li>
             <li className="nav-item active dropdown">
@@ -110,11 +92,11 @@ export function Navbar() {
                 {sort_method.label}
               </a>
               <div className="dropdown-menu" aria-labelledby="navbarDropdown">
-                {other_sort_methods.map((sort) => (
+                {sort_methods.map((sort) => (
                   <button
                     key={sort.name}
                     type="button"
-                    className="dropdown-item"
+                    className={`dropdown-item${sort.name === sort_method.name ? " active" : ""}`}
                     onClick={() => set_sort_method(sort)}
                   >
                     {sort.label}
@@ -136,11 +118,11 @@ export function Navbar() {
                   {time_filter.label}
                 </a>
                 <div className="dropdown-menu" aria-labelledby="timeDropdown">
-                  {other_time_filters.map((time) => (
+                  {time_filters.map((time) => (
                     <button
                       key={time.name}
                       type="button"
-                      className="dropdown-item"
+                      className={`dropdown-item${time.name === time_filter.name ? " active" : ""}`}
                       onClick={() => set_time_filter(time)}
                     >
                       {time.label}
@@ -177,18 +159,20 @@ export function Navbar() {
                     {reddit_user}
                   </a>
                   <div className="dropdown-menu" aria-labelledby="userDropdown">
-                    {other_users.map((user) => (
-                      <button
-                        key={user}
-                        className="dropdown-item"
-                        type="button"
-                        onClick={() => set_reddit_user(user)}
-                      >
-                        {user}
-                      </button>
-                    ))}
-                    {other_users.length > 0 && (
-                      <div className="dropdown-divider"></div>
+                    {reddit_users.length > 1 && (
+                      <>
+                        {reddit_users.map((user) => (
+                          <button
+                            key={user}
+                            className={`dropdown-item${user === reddit_user ? " active" : ""}`}
+                            type="button"
+                            onClick={() => set_reddit_user(user)}
+                          >
+                            {user}
+                          </button>
+                        ))}
+                        <div className="dropdown-divider"></div>
+                      </>
                     )}
                     <a
                       href={`${SVC_WEB_ROOT}/svc/accounts/logout/`}
@@ -206,3 +190,20 @@ export function Navbar() {
     </nav>
   )
 }
+
+interface FeedButtonProps {
+  pathname: string
+  label?: string
+  history: any
+  location: any
+}
+
+const FeedButton = memo<FeedButtonProps>(({ pathname, label, history, location }) => (
+  <button
+    type="button"
+    className={`dropdown-item${location.pathname === pathname ? " active" : ""}`}
+    onClick={() => history.push(pathname)}
+  >
+    {label || pathname}
+  </button>
+))
