@@ -100,7 +100,9 @@ export function LinkLoader() {
 
   const items = results.submissions.slice(0, (pageIndex + 1) * pageSize)
   const screen_width = .9 * window.innerWidth
-  const screen_height = .7 * window.innerHeight
+  const screen_height = .8 * window.innerHeight
+  const min_height = .5 * screen_height
+  const max_width = .8 * screen_width
   const rows = []
   let row_items = []
   let ars = []
@@ -113,7 +115,8 @@ export function LinkLoader() {
     const new_sum_ars = sum_ars + ar
     const width = screen_width * ar / new_sum_ars
     const new_height = Math.min(width / ar, screen_height)
-    if (new_height < height) {
+    const sum_widths = ars.reduce((sum, ar) => sum + (ar * height), 0)
+    if (new_height < min_height || sum_widths > max_width) {
       rows.push(<SubmissionRow items={row_items} ars={ars} height={height} />)
       row_items = [submission]
       ars = [ar]
@@ -190,24 +193,26 @@ interface SubmissionDisplayProps {
 
 const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
   <div className="grid-item mb-5 text-center">
-    <b>
-      <a rel="noopener noreferrer" target="_blank" href={submission.url}>
-        {submission.title}
-      </a>
-    </b>
-    <p>
-      <small>
-        {submission.subreddit} -{" "}
-        <a
-          rel="noopener noreferrer"
-          target="_blank"
-          href={`https://old.reddit.com${submission.permalink}`}
-        >
-          {submission.num_comments} comments
-        </a>{" "}
-        - {submission.posted_at} - {submission.score}
-      </small>
-    </p>
+    <div className="text-truncate">
+      <b>
+        <a rel="noopener noreferrer" target="_blank" href={submission.url}>
+          {submission.title}
+        </a>
+      </b>
+      <p>
+        <small>
+          {submission.subreddit} -{" "}
+          <a
+            rel="noopener noreferrer"
+            target="_blank"
+            href={`https://old.reddit.com${submission.permalink}`}
+          >
+            {submission.num_comments} comments
+          </a>{" "}
+          - {submission.posted_at} - {submission.score}
+        </small>
+      </p>
+    </div>
     {submission.embed && (
       <div className="w-100 text-center"
         dangerouslySetInnerHTML={{ __html: submission.embed.html }}
