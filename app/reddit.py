@@ -17,17 +17,9 @@ from typing import (
 )
 
 from .dao import ProfileDao, RelativeScoringDao
+from .data import Multi, Submission, Token
 from .embed import get_embed
-from .models import (
-    Feed,
-    FeedType,
-    Link,
-    Multi,
-    Profile,
-    RelativeScoring,
-    Submission,
-    Token,
-)
+from .models import Feed, FeedType, Link, Profile, RelativeScoring
 from .utils import from_obj, from_timestamp_utc
 
 T = TypeVar("T")

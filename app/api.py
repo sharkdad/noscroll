@@ -10,7 +10,8 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .dao import SeenSubmissionDao
-from .models import AppDetails, Feed, Link, SubmissionResults
+from .data import AppDetails, SubmissionResults
+from .models import Feed, Link
 from .reddit import get_multis, use_anon_reddit, use_oauth_reddit, get_submissions
 
 
@@ -92,13 +93,13 @@ class SubmissionViewSet(ViewSet):
             else get_submissions_listing(request)
         )
 
-        results = list(get_submissions(
+        results = (
             use_oauth_reddit(request.user.profile, username, get_results)
             if request.user.is_authenticated
             else use_anon_reddit(get_results)
-        ))
+        )
 
-        return Response(SubmissionResults(results))
+        return Response(SubmissionResults(list(get_submissions(results))))
 
     @action(detail=False, methods=["put"])
     def mark_seen(self, request):

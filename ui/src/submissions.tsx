@@ -98,13 +98,42 @@ export function LinkLoader() {
     await put("/svc/api/submissions/mark_seen/", { ids })
   })
 
+  const items = results.submissions.slice(0, (pageIndex + 1) * pageSize)
+  const screen_width = .9 * window.innerWidth
+  const screen_height = .7 * window.innerHeight
+  const rows = []
+  let row_items = []
+  let ars = []
+  let sum_ars = 0
+  let height = 0
+  items.forEach(submission => {
+    const ar = submission.embed && submission.embed.width && submission.embed.height
+      ? submission.embed.width / submission.embed.height
+      : 1
+    const new_sum_ars = sum_ars + ar
+    const width = screen_width * ar / new_sum_ars
+    const new_height = Math.min(width / ar, screen_height)
+    if (new_height < height) {
+      rows.push(<SubmissionRow items={row_items} ars={ars} height={height} />)
+      row_items = [submission]
+      ars = [ar]
+      sum_ars = ar
+      height = Math.min(screen_width / ar, screen_height)
+    } else {
+      row_items.push(submission)
+      ars.push(ar)
+      sum_ars = new_sum_ars
+      height = new_height
+    }
+  })
+  if (row_items.length > 0) {
+    rows.push(<SubmissionRow items={row_items} ars={ars} height={height} />)
+  }
+
+
   return (
     <>
-      {results.submissions
-        .slice(0, (pageIndex + 1) * pageSize)
-        .map((submission) => (
-          <SubmissionDisplay key={submission.id} submission={submission} />
-        ))}
+      {rows}
       {results.submissions.length > 0 && (
         <div className="d-flex flex-column align-items-center">
           <button
@@ -139,37 +168,50 @@ interface ResultsState {
   submissions: any[]
 }
 
+interface SubmissionRowProps {
+  items: any[]
+  ars: number[]
+  height: number
+}
+
+const SubmissionRow = memo<SubmissionRowProps>(({ items, ars, height }) => (
+  <div className="grid-row">
+    {items.map((item, index) => (
+      <div key={item.id} style={{ maxWidth: `${height * ars[index]}px`, width: "100%" }}>
+        <SubmissionDisplay submission={item} />
+      </div>
+    ))}
+  </div>
+))
+
 interface SubmissionDisplayProps {
   submission: any
 }
 
 const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
-  <>
-    <div className="container text-center">
-      <b>
-        <a rel="noopener noreferrer" target="_blank" href={submission.url}>
-          {submission.title}
-        </a>
-      </b>
-      <p>
-        <small>
-          {submission.subreddit} -{" "}
-          <a
-            rel="noopener noreferrer"
-            target="_blank"
-            href={`https://old.reddit.com${submission.permalink}`}
-          >
-            {submission.num_comments} comments
-          </a>{" "}
-          - {submission.posted_at} - {submission.score}
-        </small>
-      </p>
-    </div>
+  <div className="grid-item mb-5 text-center">
+    <b>
+      <a rel="noopener noreferrer" target="_blank" href={submission.url}>
+        {submission.title}
+      </a>
+    </b>
+    <p>
+      <small>
+        {submission.subreddit} -{" "}
+        <a
+          rel="noopener noreferrer"
+          target="_blank"
+          href={`https://old.reddit.com${submission.permalink}`}
+        >
+          {submission.num_comments} comments
+        </a>{" "}
+        - {submission.posted_at} - {submission.score}
+      </small>
+    </p>
     {submission.embed && (
       <div className="w-100 text-center"
-        dangerouslySetInnerHTML={{ __html: submission.embed }}
+        dangerouslySetInnerHTML={{ __html: submission.embed.html }}
       />
     )}
-    <div className="mb-5" />
-  </>
+  </div>
 ))

@@ -6,7 +6,7 @@ from allauth.socialaccount.models import SocialLogin
 from django.http.request import HttpRequest
 
 from .dao import ProfileDao
-from .models import Token
+from .data import Token
 
 
 def register_signals() -> None:

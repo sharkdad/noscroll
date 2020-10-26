@@ -3,7 +3,8 @@ from typing import Iterable
 
 from django.db import connection
 
-from .models import Profile, RelativeScoring, SeenSubmission, Token
+from .data import Token
+from .models import Profile, RelativeScoring, SeenSubmission
 from .utils import to_json
 
 
