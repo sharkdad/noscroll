@@ -177,23 +177,31 @@ interface SubmissionRowProps {
   height: number
 }
 
-const SubmissionRow = memo<SubmissionRowProps>(({ items, ars, height }) => (
-  <div className="grid-row">
-    {items.map((item, index) => (
-      <div key={item.id} style={{ maxWidth: `${height * ars[index]}px`, width: "100%" }}>
-        <SubmissionDisplay submission={item} />
-      </div>
-    ))}
-  </div>
-))
+const SubmissionRow = memo<SubmissionRowProps>(({ items, ars, height }) => {
+  const screen_width = window.innerWidth
+  const widths = ars.map(ar => height * ar)
+  const total_width = widths.reduce((sum, width) => sum + width, 0)
+  const spacing_width = screen_width - total_width
+  const spacing_per = spacing_width / items.length
+  return (
+    <div className="grid-row mb-5">
+      {items.map((item, index) => (
+        <div key={item.id} style={{ width: `${100 * (widths[index] + spacing_per) / screen_width}%` }}>
+          <SubmissionDisplay submission={item} max_width={widths[index]} />
+        </div>
+      ))}
+    </div>
+  )
+})
 
 interface SubmissionDisplayProps {
   submission: any
+  max_width: number
 }
 
-const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
-  <div className="grid-item mb-5 text-center">
-    <div className="text-truncate">
+const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission, max_width }) => (
+  <>
+    <div className={`mx-2 text-center${submission.embed ? " text-truncate" : ""}`}>
       <b>
         <a rel="noopener noreferrer" target="_blank" href={submission.url}>
           {submission.title}
@@ -214,9 +222,9 @@ const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission }) => (
       </p>
     </div>
     {submission.embed && (
-      <div className="w-100 text-center"
+      <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px`}}
         dangerouslySetInnerHTML={{ __html: submission.embed.html }}
       />
     )}
-  </div>
+  </>
 ))
