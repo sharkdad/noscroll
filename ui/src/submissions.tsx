@@ -1,6 +1,7 @@
-import React, { useState, useEffect, memo, useContext } from "react"
+import React, { useState, useEffect, memo, useContext, RefObject, useRef, createRef } from "react"
 import { useParams, useLocation } from "react-router-dom"
 import { AppContext, SortBy, TimeFilter } from "./app"
+import { ScrollHandler } from "./scrolling"
 import { wrapAsync, put, get } from "./utils"
 
 export function LinkLoader() {
@@ -13,13 +14,48 @@ export function LinkLoader() {
   const { search } = useLocation()
 
   const [nextLoad, setNextLoad] = useState<LoadState>({})
-  const [results, setResults] = useState<ResultsState>({ submissions: [] })
-  const [pageIndex, setPageIndex] = useState(0)
+  const [results, setResults] = useState<ResultsState>({
+    submissions: [],
+    page_index: 0
+  })
+
+  function loadMore() {
+    setResults(lastResults => {
+      const newPageIndex = lastResults.page_index + 1
+  
+      const nextPageIndex = newPageIndex + 1
+      if ((nextPageIndex + 1) * pageSize > lastResults.submissions.length) {
+        const lastSubmission = lastResults.submissions[lastResults.submissions.length - 1]
+        if (lastSubmission == null) {
+          return
+        }
+        setNextLoad((nl) => ({ ...nl, after: lastSubmission.id }))
+      }
+
+      return {...lastResults, page_index: newPageIndex }
+    })
+  }
+
+  const layout = useRef<LayoutState>({ item_divs: [], next_observe_idx: 0 })
+  const scroll = useRef(new ScrollHandler(() => loadMore()))
+
+  useEffect(() => {
+    const timer = setInterval(wrapAsync(async () => {
+      const ids = Array.from(scroll.current.read_ids)
+      if (ids.length > 0) {
+        if (state.reddit_user) {
+          await put("/svc/api/submissions/mark_seen/", { ids })
+        }
+        ids.forEach(id => scroll.current.read_ids.delete(id))
+      }
+    }), 5000);
+    return () => clearInterval(timer);
+  }, [scroll, state.reddit_user])
 
   useEffect(
     wrapAsync(async () => {
-      setResults({ submissions: [] })
-      setPageIndex(0)
+      setResults({ submissions: [], page_index: 0 })
+      layout.current = { item_divs: [], next_observe_idx: 0 }
       setNextLoad({
         id: {
           reddit_user,
@@ -70,40 +106,20 @@ export function LinkLoader() {
       const response = await get(`/svc/api/submissions/?${searchParams}`)
       const result = await response.json()
       setResults((lastResults) => ({
+        ...lastResults,
         submissions: [...lastResults.submissions, ...result.results],
       }))
     }),
     [nextLoad]
   )
 
-  function loadMore() {
-    markAsRead()
-    const newPageIndex = pageIndex + 1
-    setPageIndex(newPageIndex)
-
-    const nextPageIndex = newPageIndex + 1
-    if ((nextPageIndex + 1) * pageSize > results.submissions.length) {
-      const lastSubmission = results.submissions[results.submissions.length - 1]
-      if (lastSubmission == null) {
-        return
-      }
-      setNextLoad((nl) => ({ ...nl, after: lastSubmission.id }))
-    }
-  }
-
-  const markAsRead = wrapAsync(async () => {
-    const start = pageIndex * pageSize
-    const end = (pageIndex + 1) * pageSize
-    const ids = results.submissions.slice(start, end).map((s) => s.id)
-    await put("/svc/api/submissions/mark_seen/", { ids })
-  })
-
-  const items = results.submissions.slice(0, (pageIndex + 1) * pageSize)
+  const items = results.submissions.slice(0, (results.page_index + 1) * pageSize)
   const screen_width = .9 * window.innerWidth
   const screen_height = .8 * window.innerHeight
   const min_height = .5 * screen_height
   const max_width = .8 * screen_width
   const rows = []
+  let items_offset = 0
   let row_items = []
   let ars = []
   let sum_ars = 0
@@ -117,7 +133,9 @@ export function LinkLoader() {
     const new_height = Math.min(width / ar, screen_height)
     const sum_widths = ars.reduce((sum, ar) => sum + (ar * height), 0)
     if (new_height < min_height || sum_widths > max_width) {
-      rows.push(<SubmissionRow items={row_items} ars={ars} height={height} />)
+      rows.push(<SubmissionRow key={rows.length} items={row_items} ars={ars}
+        height={height} items_offset={items_offset} layout={layout.current} />)
+      items_offset += row_items.length
       row_items = [submission]
       ars = [ar]
       sum_ars = ar
@@ -130,9 +148,22 @@ export function LinkLoader() {
     }
   })
   if (row_items.length > 0) {
-    rows.push(<SubmissionRow items={row_items} ars={ars} height={height} />)
+    rows.push(<SubmissionRow key={rows.length} items={row_items} ars={ars}
+      height={height} items_offset={items_offset} layout={layout.current} />)
   }
 
+  const new_item_count = items.length - layout.current.item_divs.length
+  if (new_item_count > 0) {
+    const new_refs =
+      Array.from({ length: new_item_count }, () => createRef<HTMLDivElement>())
+    layout.current.item_divs = [...layout.current.item_divs, ...new_refs]
+  }
+
+  useEffect(() => {
+    const new_divs = layout.current.item_divs.slice(layout.current.next_observe_idx)
+    new_divs.forEach(ref => scroll.current.observe(ref.current))
+    layout.current.next_observe_idx = layout.current.item_divs.length
+  }, [layout.current.item_divs])
 
   return (
     <>
@@ -169,15 +200,24 @@ interface LoadState {
 
 interface ResultsState {
   submissions: any[]
+  page_index: number
+}
+
+interface LayoutState {
+  item_divs: RefObject<HTMLDivElement>[]
+  next_observe_idx: number
 }
 
 interface SubmissionRowProps {
   items: any[]
   ars: number[]
   height: number
+  items_offset: number
+  layout: LayoutState
 }
 
-const SubmissionRow = memo<SubmissionRowProps>(({ items, ars, height }) => {
+const SubmissionRow = memo((props: SubmissionRowProps) => {
+  const { items, ars, height, items_offset, layout } = props
   const screen_width = window.innerWidth
   const widths = ars.map(ar => height * ar)
   const total_width = widths.reduce((sum, width) => sum + width, 0)
@@ -186,7 +226,13 @@ const SubmissionRow = memo<SubmissionRowProps>(({ items, ars, height }) => {
   return (
     <div className="grid-row mb-5">
       {items.map((item, index) => (
-        <div key={item.id} style={{ width: `${100 * (widths[index] + spacing_per) / screen_width}%` }}>
+        <div
+          key={item.id}
+          data-reddit-id={item.id}
+          data-load-more={items_offset + index === Math.max(0, layout.item_divs.length - 5)}
+          ref={layout.item_divs[items_offset + index]}
+          style={{ width: `${100 * (widths[index] + spacing_per) / screen_width}%` }}
+        >
           <SubmissionDisplay submission={item} max_width={widths[index]} />
         </div>
       ))}
