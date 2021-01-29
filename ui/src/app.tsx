@@ -19,6 +19,7 @@ export interface Multi {
   owner: string
   name: string
   display_name: string
+  feed_id?: string
 }
 
 export interface AppDetails {
@@ -66,6 +67,7 @@ export function App() {
       { name: "rising", label: "Rising", has_time_filter: false },
       { name: "new", label: "New", has_time_filter: false },
       { name: "controversial", label: "Controversial", has_time_filter: true },
+      { name: "curated", label: "Curated", has_time_filter: false },
     ],
     time_filters: [
       { name: "all", label: "All time" },

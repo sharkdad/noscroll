@@ -1,7 +1,11 @@
 from typing import Callable, List
+
+from django.db.models import Subquery
+from django_filters.rest_framework import FilterSet, NumberFilter
 from praw import Reddit
 from praw.models import Submission
 from rest_framework.decorators import action
+from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -11,7 +15,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .dao import SeenSubmissionDao
 from .data import AppDetails, SubmissionResults
-from .models import Feed, Link
+from .models import Feed, Link, SeenSubmission
 from .reddit import get_multis, use_anon_reddit, use_oauth_reddit, get_submissions
 
 
@@ -134,11 +138,30 @@ class FeedSerializer(ModelSerializer):
         fields = ("id", "name")
 
 
+class LinkFilterSet(FilterSet):
+    min_score = NumberFilter(field_name="score", lookup_expr="gte")
+
+    class Meta:
+        model = Link
+        fields = ["feeds", "min_score"]
+
+
+class LinkPagination(CursorPagination):
+    page_size = 100
+    cursor_query_param = "after"
+
+
 class LinkViewSet(ReadOnlyModelViewSet):
-    queryset = Link.objects.exclude(reddit_id=None)
     serializer_class = LinkSerializer
-    filterset_fields = ("is_read", "is_saved", "feeds")
-    ordering_fields = ("posted_at", "score")
+    filterset_class = LinkFilterSet
+    pagination_class = LinkPagination
+    ordering_fields = ("posted_at",)
+    ordering = "-posted_at"
+
+    def get_queryset(self):
+        links = Link.objects.exclude(reddit_id=None)
+        seen = SeenSubmission.objects.filter(user=self.request.user)
+        return links.exclude(reddit_id__in=Subquery(seen.values("submission_id")))
 
     @action(detail=False, methods=["put"])
     def mark_read(self, request):
@@ -155,5 +178,5 @@ class FeedViewSet(ReadOnlyModelViewSet):
 router = DefaultRouter()
 router.register("app", AppDetailsViewSet, "App")
 router.register("feeds", FeedViewSet)
-router.register("links", LinkViewSet)
+router.register("links", LinkViewSet, "Link")
 router.register("submissions", SubmissionViewSet, "Submission")
