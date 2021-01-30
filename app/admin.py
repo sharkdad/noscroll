@@ -1,7 +1,7 @@
 from django.contrib.admin import ModelAdmin, register
 from django.utils.html import format_html
 
-from .models import Link, RelativeScoring, SeenSubmission
+from .models import Feed, Link, RelativeScoring, SeenSubmission
 
 
 def linked_title(l: Link):
@@ -43,3 +43,9 @@ class RelativeScoringAdmin(ModelAdmin):
 class SeenSubmissionAdmin(ModelAdmin):
     list_display = ("id", "user", "submission_id")
     search_fields = ("user", "submission_id")
+
+
+@register(Feed)
+class FeedAdmin(ModelAdmin):
+    list_display = ("id", "name")
+    search_fields = ("id", "metadata")
