@@ -13,6 +13,9 @@ export function LinkLoader() {
   const { subreddit, multiOwner, multiName } = useParams()
   const { search } = useLocation()
 
+  const feedId =
+    state.details.multis.find(m => m.owner === multiOwner && m.name === multiName)?.feed_id
+
   const [nextLoad, setNextLoad] = useState<LoadState>({})
   const [results, setResults] = useState<ResultsState>({
     submissions: [],
@@ -29,7 +32,7 @@ export function LinkLoader() {
         if (lastSubmission == null) {
           return
         }
-        setNextLoad((nl) => ({ ...nl, after: lastSubmission.id }))
+        setNextLoad((nl) => ({ ...nl, after: lastSubmission.id, next: lastResults.next }))
       }
 
       return {...lastResults, page_index: newPageIndex }
@@ -62,13 +65,14 @@ export function LinkLoader() {
           subreddit,
           multiOwner,
           multiName,
+          feedId,
           sort_method,
           time_filter,
           search,
         },
       })
     }),
-    [reddit_user, subreddit, multiOwner, multiName, sort_method, time_filter, search]
+    [reddit_user, subreddit, multiOwner, multiName, feedId, sort_method, time_filter, search]
   )
 
   useEffect(
@@ -78,36 +82,55 @@ export function LinkLoader() {
         return
       }
 
-      const searchParams = new URLSearchParams()
-      searchParams.set("user", loadId.reddit_user)
-      searchParams.set("sort", loadId.sort_method.name)
-      if (loadId.sort_method.has_time_filter) {
-        searchParams.set("time", loadId.time_filter.name)
+      var url = ""
+      if (nextLoad.next != null) {
+        url = nextLoad.next
+      } else if (loadId.sort_method.name === "curated") {
+        const searchParams = new URLSearchParams()
+        searchParams.set("min_score", "500")
+        searchParams.set("feeds", loadId.feedId)
+
+        if (loadId.search) {
+          new URLSearchParams(loadId.search).forEach(
+            (value, key) => searchParams.set(key, value))
+        }
+        
+        url = `/svc/api/links/?${searchParams}`
+      } else {
+        const searchParams = new URLSearchParams()
+        searchParams.set("user", loadId.reddit_user)
+        searchParams.set("sort", loadId.sort_method.name)
+        if (loadId.sort_method.has_time_filter) {
+          searchParams.set("time", loadId.time_filter.name)
+        }
+
+        if (loadId.subreddit != null) {
+          searchParams.set("subreddit", loadId.subreddit)
+        }
+
+        if (loadId.multiOwner != null && loadId.multiName != null) {
+          searchParams.set("multi_owner", loadId.multiOwner)
+          searchParams.set("multi_name", loadId.multiName)
+        }
+
+        if (nextLoad.after != null) {
+          searchParams.set("after", nextLoad.after)
+        }
+
+        if (loadId.search) {
+          new URLSearchParams(loadId.search).forEach(
+            (value, key) => searchParams.set(key, value))
+        }
+        
+        url = `/svc/api/submissions/?${searchParams}`
       }
 
-      if (loadId.subreddit != null) {
-        searchParams.set("subreddit", loadId.subreddit)
-      }
-
-      if (loadId.multiOwner != null && loadId.multiName != null) {
-        searchParams.set("multi_owner", loadId.multiOwner)
-        searchParams.set("multi_name", loadId.multiName)
-      }
-
-      if (nextLoad.after != null) {
-        searchParams.set("after", nextLoad.after)
-      }
-
-      if (loadId.search) {
-        new URLSearchParams(loadId.search).forEach(
-          (value, key) => searchParams.set(key, value))
-      }
-
-      const response = await get(`/svc/api/submissions/?${searchParams}`)
+      const response = await get(url)
       const result = await response.json()
       setResults((lastResults) => ({
         ...lastResults,
         submissions: [...lastResults.submissions, ...result.results],
+        next: result.next,
       }))
     }),
     [nextLoad]
@@ -188,6 +211,7 @@ interface LoadId {
   subreddit?: string
   multiOwner?: string
   multiName?: string
+  feedId?: string
   sort_method: SortBy
   time_filter: TimeFilter
   search: string
@@ -196,10 +220,12 @@ interface LoadId {
 interface LoadState {
   id?: LoadId
   after?: string
+  next?: string
 }
 
 interface ResultsState {
   submissions: any[]
+  next?: string
   page_index: number
 }
 
@@ -259,7 +285,7 @@ const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission, max_width 
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href={`https://old.reddit.com${submission.permalink}`}
+            href={`https://reddit.com${submission.permalink}`}
           >
             {submission.num_comments} comments
           </a>{" "}

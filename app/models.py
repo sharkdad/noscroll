@@ -20,7 +20,7 @@ from django.db.models import (
     UUIDField,
 )
 
-
+from .data import Embed
 from .embed import get_embed
 
 
@@ -92,7 +92,7 @@ class Link(Model):
         return self.metadata.get("subreddit")
 
     @property
-    def embed(self) -> Optional[str]:
+    def embed(self) -> Optional[Embed]:
         return get_embed(self.metadata)
 
     def get_absolute_url(self):

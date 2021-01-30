@@ -19,6 +19,7 @@ export interface Multi {
   owner: string
   name: string
   display_name: string
+  feed_id?: string
 }
 
 export interface AppDetails {
@@ -61,6 +62,7 @@ export function App() {
       set_state((old_state) => ({ ...old_state, time_filter }))
     },
     sort_methods: [
+      { name: "curated", label: "Curated", has_time_filter: false },
       { name: "hot", label: "Hot", has_time_filter: false },
       { name: "top", label: "Top", has_time_filter: true },
       { name: "rising", label: "Rising", has_time_filter: false },

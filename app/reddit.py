@@ -79,8 +79,12 @@ def get_submissions(subs: Iterable[praw.models.Submission]) -> Iterable[Submissi
 
 
 def get_multis(reddit: Reddit) -> Iterable[Multi]:
+    feeds = Feed.objects.filter(feed_type=FeedType.REDDIT_MULTI)
+    feed_ids = {(f.metadata["owner"], f.metadata["name"]): str(f.id) for f in feeds}
+
     def create_multi(multi: praw.models.Multireddit) -> Multi:
-        return Multi(multi.owner, multi.name, multi.display_name)
+        feed_id: Optional[str] = feed_ids.get((multi.owner, multi.name))
+        return Multi(multi.owner, multi.name, multi.display_name, feed_id)
 
     return (create_multi(m) for m in reddit.user.me().multireddits())
 

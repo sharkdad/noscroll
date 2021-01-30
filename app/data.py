@@ -9,6 +9,7 @@ class Multi:
     owner: str
     name: str
     display_name: str
+    feed_id: Optional[str]
 
 
 @dataclass
