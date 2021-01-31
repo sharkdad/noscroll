@@ -19,7 +19,8 @@ export function LinkLoader() {
   const [nextLoad, setNextLoad] = useState<LoadState>({})
   const [results, setResults] = useState<ResultsState>({
     submissions: [],
-    page_index: 0
+    page_index: 0,
+    is_last_page: false,
   })
 
   function loadMore() {
@@ -27,7 +28,7 @@ export function LinkLoader() {
       const newPageIndex = lastResults.page_index + 1
   
       const nextPageIndex = newPageIndex + 1
-      if ((nextPageIndex + 1) * pageSize > lastResults.submissions.length) {
+      if ((nextPageIndex + 1) * pageSize > lastResults.submissions.length && !lastResults.is_last_page) {
         const lastSubmission = lastResults.submissions[lastResults.submissions.length - 1]
         if (lastSubmission == null) {
           return
@@ -57,7 +58,7 @@ export function LinkLoader() {
 
   useEffect(
     wrapAsync(async () => {
-      setResults({ submissions: [], page_index: 0 })
+      setResults({ submissions: [], page_index: 0, is_last_page: false })
       layout.current = { item_divs: [], next_observe_idx: 0 }
       setNextLoad({
         id: {
@@ -131,6 +132,7 @@ export function LinkLoader() {
         ...lastResults,
         submissions: [...lastResults.submissions, ...result.results],
         next: result.next,
+        is_last_page: loadId.sort_method.name === "curated" && result.next == null,
       }))
     }),
     [nextLoad]
@@ -226,6 +228,7 @@ interface LoadState {
 interface ResultsState {
   submissions: any[]
   next?: string
+  is_last_page: boolean
   page_index: number
 }
 
