@@ -1,0 +1,9 @@
+---
+version: "3.8"
+services:
+  noscroll:
+    build: .
+    image: noscroll:latest
+    container_name: noscroll
+    network_mode: host
+    restart: unless-stopped
