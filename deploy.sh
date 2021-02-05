@@ -3,7 +3,7 @@
 set -e;
 
 sudo docker-compose pull
-sudo docker-compose up -d
+sudo docker-compose up --build -d
 
 sudo docker exec -it noscroll python /noscroll/manage.py migrate --no-input
 
