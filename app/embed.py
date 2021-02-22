@@ -7,6 +7,10 @@ from django.utils.safestring import mark_safe
 from .data import Embed
 from .utils import first
 
+EMBED_TYPE_HTML = "html"
+EMBED_TYPE_VIDEO = "video"
+EMBED_TYPE_IMAGE = "image"
+
 
 def get_embed(md: Mapping) -> Optional[Embed]:
     embed_funcs = (
@@ -61,7 +65,7 @@ def embed_reddit_media_embed(md: Mapping) -> Optional[Embed]:
         padding = f"{(100 * (h / w)):.2f}%"
 
         embed_html: str = format_html(html, padding, mark_safe(content))
-        return Embed(embed_html, w, h)
+        return Embed(EMBED_TYPE_HTML, None, embed_html, w, h)
 
     embeds = (md.get(e) for e in ("media_embed", "secure_media_embed"))
     return first((media_embed(e) for e in embeds if e))
@@ -105,21 +109,11 @@ def embed_reddit_video_iframe(md: Mapping) -> Optional[str]:
 def embed_video(url_field: str, md: Mapping) -> Optional[Embed]:
     if not (url := md.get(url_field)):
         return None
-    html = """
-        <div>
-            <video controls style="width: 100%; height: auto">
-                <source src='{}' type='video/mp4'>
-            </video>
-        </div>
-    """
-    return Embed(format_html(html, url), md.get("width"), md.get("height"))
+    return Embed(EMBED_TYPE_VIDEO, url, None, md.get("width"), md.get("height"))
 
 
 def embed_image(url: str, width: Optional[int], height: Optional[int]) -> Embed:
-    html = """
-        <img src="{}" referrerpolicy="no-referrer" class="preview" />
-    """
-    return Embed(format_html(html, url), width, height)
+    return Embed(EMBED_TYPE_IMAGE, url, None, width, height)
 
 
 def get_iframe_padding(md: Mapping) -> Optional[str]:

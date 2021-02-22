@@ -21,7 +21,9 @@ class AppDetails:
 
 @dataclass
 class Embed:
-    html: str
+    embed_type: str
+    url: Optional[str]
+    html: Optional[str]
     width: Optional[int]
     height: Optional[int]
 

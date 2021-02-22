@@ -53,3 +53,11 @@ export interface SubmissionLoadingState {
   results: any[]
   is_loading: boolean
 }
+
+export interface Embed {
+  embed_type: string
+  url?: string
+  html?: string
+  width?: number
+  height?: number
+}

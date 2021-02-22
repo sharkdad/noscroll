@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo, useContext, useRef } from "react"
 import { AppContext } from "./app"
-import { LoadId, SubmissionLoadingState } from "./data"
+import { Embed, LoadId, SubmissionLoadingState } from "./data"
 import { ScrollHandler } from "./scrolling"
 import { callAsync, wrapAsync } from "./utils"
 
@@ -136,32 +136,79 @@ interface SubmissionDisplayProps {
   max_width: number
 }
 
-const SubmissionDisplay = memo<SubmissionDisplayProps>(({ submission, max_width }) => (
-  <>
-    <div className={`mx-2 text-center${submission.embed ? " text-truncate" : ""}`}>
-      <b>
-        <a rel="noopener noreferrer" target="_blank" href={submission.url}>
-          {submission.title}
-        </a>
-      </b>
-      <p>
-        <small>
-          {submission.subreddit} -{" "}
-          <a
-            rel="noopener noreferrer"
-            target="_blank"
-            href={`https://reddit.com${submission.permalink}`}
-          >
-            {submission.num_comments} comments
-          </a>{" "}
-          - {submission.posted_at} - {submission.score}
-        </small>
-      </p>
+const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
+  const { submission, max_width } = props
+  const embed_type = submission.embed?.embed_type
+  return (
+    <>
+      <div className={`mx-2 text-center${submission.embed ? " text-truncate" : ""}`}>
+        <b>
+          <a rel="noopener noreferrer" target="_blank" href={submission.url}>
+            {submission.title}
+          </a>
+        </b>
+        <p>
+          <small>
+            {submission.subreddit} -{" "}
+            <a
+              rel="noopener noreferrer"
+              target="_blank"
+              href={`https://reddit.com${submission.permalink}`}
+            >
+              {submission.num_comments} comments
+            </a>{" "}
+            - {submission.posted_at} - {submission.score}
+          </small>
+        </p>
+      </div>
+      {submission.embed && (
+        <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px`}}>
+          {embed_type === "html" && <HtmlEmbed embed={submission.embed} />}
+          {embed_type === "video" && <VideoEmbed embed={submission.embed} />}
+          {embed_type === "image" && <ImageEmbed embed={submission.embed} />}
+        </div>
+      )}
+    </>
+  )
+})
+
+interface EmbedProps {
+  embed: Embed
+}
+
+const HtmlEmbed = memo((props: EmbedProps) => {
+  const { embed } = props
+  const { html } = embed
+  const pt = get_ratio_padding_top(embed)
+
+  return (
+    <div className="embed" style={{ paddingTop: pt }} dangerouslySetInnerHTML={{ __html: html }} />
+  )
+})
+
+const VideoEmbed = memo((props: EmbedProps) => {
+  const { url } = props.embed
+
+  return (
+    <div>
+      <video controls style={{ width: "100%", height: "auto" }}>
+        <source src={url} type="video/mp4" />
+      </video>
     </div>
-    {submission.embed && (
-      <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px`}}
-        dangerouslySetInnerHTML={{ __html: submission.embed.html }}
-      />
-    )}
-  </>
-))
+  )
+})
+
+const ImageEmbed = memo((props: EmbedProps) => {
+  const { url } = props.embed
+
+  return (
+    <img src={url} referrerPolicy="no-referrer" className="preview" />
+  )
+})
+
+function get_ratio_padding_top(embed: Embed): string {
+  const width = embed.width ?? 16
+  const height = embed.height ?? 9
+  const percent = 100 * (height / width)
+  return `${percent.toFixed(2)}%`
+}
