@@ -2,9 +2,11 @@ export const SVC_WEB_ROOT =
   window.location.port === "3000" ? "http://localhost:8000" : ""
 
 export function wrapAsync(func: () => Promise<any>): () => void {
-  return () => {
-    func().catch((e) => console.error(e))
-  }
+  return () => callAsync(func)
+}
+
+export function callAsync(func: () => Promise<any>): void {
+  func().catch((e) => console.error(e))
 }
 
 export async function get(url: string, init?: RequestInit): Promise<Response> {

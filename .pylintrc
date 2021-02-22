@@ -3,7 +3,7 @@ extension-pkg-whitelist=pydantic
 load-plugins=pylint_django
 
 [MESSAGES CONTROL]
-disable=C,W0703
+disable=C,W0703,E1136
 
 [BASIC]
 min-public-methods=0

@@ -1,53 +1,18 @@
 import React, { createContext, useEffect, useState } from "react"
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom"
 import { Navbar } from "./navbar"
 import { LinkLoader } from "./submissions"
 import { get, wrapAsync } from "./utils"
+import { useParams, useLocation } from "react-router-dom"
+import { AppDetails, AppGlobals, AppState, LoadId, SortBy, TimeFilter } from "./data"
 
-export interface SortBy {
-  name: string
-  label: string
-  has_time_filter: boolean
-}
 
-export interface TimeFilter {
-  name: string
-  label: string
-}
-
-export interface Multi {
-  owner: string
-  name: string
-  display_name: string
-  feed_id?: string
-}
-
-export interface AppDetails {
-  is_authenticated: boolean
-  reddit_users: string[]
-  multis: Multi[]
-}
-
-export interface AppState {
-  details: AppDetails
-  reddit_user: string
-  sort_method: SortBy
-  time_filter: TimeFilter
-}
-
-export interface AppGlobals {
-  state: AppState
-  sort_methods: SortBy[]
-  time_filters: TimeFilter[]
-  set_reddit_user: (reddit_user: string) => void
-  set_sort_method: (sort_method: SortBy) => void
-  set_time_filter: (time_filter: TimeFilter) => void
-}
-
-export const AppContext = createContext<AppGlobals>(undefined)
+export const AppContext = createContext<AppGlobals>(null)
 
 export function App() {
-  const [state, set_state] = useState<AppState>(undefined)
+  const { subreddit, multiOwner, multiName } = useParams()
+  const { search } = useLocation()
+
+  const [state, set_state] = useState<AppState>(null)
 
   const globals: AppGlobals = {
     state,
@@ -97,23 +62,35 @@ export function App() {
     []
   )
 
+  if (state == null) {
+    return <></>
+  }
+  
+  const feedId =
+    state.details.multis.find(m => m.owner === multiOwner && m.name === multiName)?.feed_id
+
+  const { reddit_user, sort_method, time_filter } = state
+
+  const loadId: LoadId = {
+    reddit_user,
+    subreddit,
+    multi_owner: multiOwner,
+    multi_name: multiName,
+    feed_id: feedId,
+    sort_method,
+    time_filter,
+    search,
+  }
+
+  const loadKey = JSON.stringify(loadId)
+
   return (
-    <React.StrictMode>
-      <Router>
-        {state && (
-          <AppContext.Provider value={globals}>
-            <Switch>
-              <Route exact path={["/", "/r/:subreddit/", "/user/:multiOwner/m/:multiName/"]}>
-                <Navbar />
-                <div className="container-fluid mt-5 pt-4">
-                  <LinkLoader />
-                </div>
-              </Route>
-            </Switch>
-          </AppContext.Provider>
-        )}
-      </Router>
-    </React.StrictMode>
+    <AppContext.Provider value={globals}>
+      <Navbar />
+      <div className="container-fluid mt-5 pt-4">
+        <LinkLoader key={loadKey} load_id={loadId} />
+      </div>
+    </AppContext.Provider>
   )
 }
 

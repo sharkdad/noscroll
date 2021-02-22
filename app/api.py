@@ -65,12 +65,7 @@ def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submiss
 
         listing = getattr(get_feed(), sort)
         args = (time,) if time else ()
-        results = list(listing(*args, limit=100, params=params))
-        if request.user.is_authenticated:
-            ids = (r.id for r in results)
-            seen_ids = set(SeenSubmissionDao.get_seen_ids(request.user.id, ids))
-            results = [r for r in results if r.id not in seen_ids]
-        return results
+        return list(listing(*args, limit=100, params=params))
 
     return get_results
 

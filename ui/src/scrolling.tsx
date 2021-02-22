@@ -1,26 +1,75 @@
-export class ScrollHandler {
-  load_more: () => void
-  observer: IntersectionObserver
-  seen_ids = new Set<string>()
-  read_ids = new Set<string>()
+import { createRef, Dispatch, RefObject, SetStateAction } from "react"
+import { LoadId, SubmissionLoadingState } from "./data"
+import { callAsync, get, put } from "./utils"
 
-  constructor(load_more: () => void) {
-    this.load_more = load_more
-    this.observer = new IntersectionObserver(this.intersection_change,
-      { threshold: [0, 1] })
+
+export class ScrollHandler {
+  private observer: IntersectionObserver
+  private item_divs: RefObject<HTMLDivElement>[] = []
+  private next_observe_idx = 0
+
+  private seen_ids = new Set<string>()
+  private read_ids = new Set<string>()
+
+  private next?: string = null
+  private after?: string = null
+  private is_more_results = true
+
+  constructor(
+    private load_id: LoadId,
+    private set_page_index: Dispatch<SetStateAction<number>>,
+    private set_loading_state: Dispatch<SetStateAction<SubmissionLoadingState>>,
+  ) {
+    this.observer = new IntersectionObserver(this.intersection_change, { threshold: [0, 1] })
   }
 
-  observe = (div: HTMLDivElement) => this.observer.observe(div)
+  expand_item_refs(item_count: number): void {
+    const new_item_count = item_count - this.item_divs.length
+    if (new_item_count > 0) {
+      const new_refs = Array.from({ length: new_item_count }, () => createRef<HTMLDivElement>())
+      this.item_divs = [...this.item_divs, ...new_refs]
+    }
+  }
 
-  intersection_change: IntersectionObserverCallback = (entries) => {
+  get_item_ref(index: number): RefObject<HTMLDivElement> {
+    return this.item_divs[index]
+  }
+
+  async load_first_page(): Promise<void> {
+    await this.load_more()
+    this.set_page_index(0)
+  }
+
+  observe_new_items(): void {
+    if (this.next_observe_idx < this.item_divs.length) {
+      const new_divs = this.item_divs.slice(this.next_observe_idx)
+      new_divs.forEach(ref => this.observer.observe(ref.current))
+      this.next_observe_idx = this.item_divs.length
+    }
+  }
+
+  async mark_as_read(is_authenticated: boolean): Promise<void> {
+    const ids = Array.from(this.read_ids)
+    if (ids.length > 0) {
+      if (is_authenticated && this.load_id.sort_method.name === "curated") {
+        await put("/svc/api/submissions/mark_seen/", { ids })
+      }
+      ids.forEach(id => this.read_ids.delete(id))
+    }
+  }
+
+  private intersection_change: IntersectionObserverCallback = (entries) => {
     entries.forEach(entry => {
       const element = entry.target as HTMLElement
       const reddit_id = element.dataset.redditId
       if (entry.isIntersecting) {
         if (!this.seen_ids.has(reddit_id)) {
           this.seen_ids.add(reddit_id)
-          if (element.dataset.loadMore === "true") {
-            this.load_more()
+          if (element.dataset.showNextPage === "true") {
+            this.set_page_index(last_index => last_index + 1)
+          }
+          if (element.dataset.loadMore === "true" && this.is_more_results) {
+            callAsync(() => this.load_more())
           }
         }
       } else if (this.seen_ids.has(reddit_id) && entry.boundingClientRect.top <= 0) {
@@ -31,5 +80,63 @@ export class ScrollHandler {
         this.observer.unobserve(element)
       }
     })
+  }
+
+  private async load_more(): Promise<void> {
+    this.set_loading_state(state => ({ ...state, is_loading: true }))
+    var url = ""
+    if (this.next != null) {
+      url = this.next
+    } else if (this.load_id.sort_method.name === "curated") {
+      const searchParams = new URLSearchParams()
+      searchParams.set("min_score", "500")
+      searchParams.set("feeds", this.load_id.feed_id)
+  
+      if (this.load_id.search) {
+        new URLSearchParams(this.load_id.search).forEach(
+          (value, key) => searchParams.set(key, value))
+      }
+      
+      url = `/svc/api/links/?${searchParams}`
+    } else {
+      const searchParams = new URLSearchParams()
+      if (this.load_id.reddit_user != null) {
+        searchParams.set("user", this.load_id.reddit_user)
+      }
+      searchParams.set("sort", this.load_id.sort_method.name)
+      if (this.load_id.sort_method.has_time_filter) {
+        searchParams.set("time", this.load_id.time_filter.name)
+      }
+  
+      if (this.load_id.subreddit != null) {
+        searchParams.set("subreddit", this.load_id.subreddit)
+      }
+  
+      if (this.load_id.multi_owner != null && this.load_id.multi_name != null) {
+        searchParams.set("multi_owner", this.load_id.multi_owner)
+        searchParams.set("multi_name", this.load_id.multi_name)
+      }
+  
+      if (this.after != null) {
+        searchParams.set("after", this.after)
+      }
+  
+      if (this.load_id.search) {
+        new URLSearchParams(this.load_id.search).forEach(
+          (value, key) => searchParams.set(key, value))
+      }
+      
+      url = `/svc/api/submissions/?${searchParams}`
+    }
+  
+    const response = await (await get(url)).json()
+    const last = response.results[response.results.length - 1]
+    this.after = last?.id
+    this.next = response.next
+    this.is_more_results = this.after != null || this.next != null
+    this.set_loading_state(last_state => ({
+      results: [...last_state.results, ...response.results],
+      is_loading: false,
+    }))
   }
 }
