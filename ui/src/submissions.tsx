@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo, useContext, useRef } from "react"
 import { AppContext } from "./app"
-import { Embed, LoadId, SubmissionLoadingState } from "./data"
-import { ScrollHandler } from "./scrolling"
+import { LoadId } from "./data"
+import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
 import { callAsync, wrapAsync } from "./utils"
 
 export interface LinkLoaderProps {
@@ -32,7 +32,7 @@ interface LayoutProps {
 
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
-  const is_authenticated = useContext(AppContext).state.details.is_authenticated
+  const { is_authenticated } = useContext(AppContext).app_details
 
   scroll.expand_item_refs(items.length)
 
@@ -162,18 +162,27 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         </p>
       </div>
       {submission.embed && (
-        <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px`}}>
-          {embed_type === "html" && <HtmlEmbed embed={submission.embed} />}
-          {embed_type === "video" && <VideoEmbed embed={submission.embed} />}
-          {embed_type === "image" && <ImageEmbed embed={submission.embed} />}
+        <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px` }}>
+          {embed_type === "html" && <HtmlEmbed embed={submission.embed} title={submission.title} />}
+          {embed_type === "video" && <VideoEmbed embed={submission.embed} title={submission.title} />}
+          {embed_type === "image" && <ImageEmbed embed={submission.embed} title={submission.title} />}
         </div>
       )}
     </>
   )
 })
 
+interface Embed {
+  embed_type: string
+  url?: string
+  html?: string
+  width?: number
+  height?: number
+}
+
 interface EmbedProps {
   embed: Embed
+  title: string
 }
 
 const HtmlEmbed = memo((props: EmbedProps) => {
@@ -202,7 +211,7 @@ const ImageEmbed = memo((props: EmbedProps) => {
   const { url } = props.embed
 
   return (
-    <img src={url} referrerPolicy="no-referrer" className="preview" />
+    <img alt={props.title} src={url} referrerPolicy="no-referrer" className="preview" />
   )
 })
 

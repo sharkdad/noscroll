@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Iterable, List
 
 from django.db.models import Subquery
 from django_filters.rest_framework import FilterSet, NumberFilter
@@ -6,7 +6,7 @@ from praw import Reddit
 from praw.models import Submission
 from rest_framework.decorators import action
 from rest_framework.pagination import CursorPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
@@ -14,24 +14,57 @@ from rest_framework.serializers import ModelSerializer, CharField
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from .dao import SeenSubmissionDao
-from .data import AppDetails, SubmissionResults
-from .models import Feed, Link, SeenSubmission
-from .reddit import get_multis, use_anon_reddit, use_oauth_reddit, get_submissions
+from .data import AppDetails, Location, LocationFeed, Locations, SubmissionResults
+from .models import Feed, FeedType, Link, SeenSubmission
+from .reddit import (
+    get_multis,
+    get_subreddits,
+    use_anon_reddit,
+    use_oauth_reddit,
+    get_submissions,
+)
+
+
+def get_multi_feeds() -> Iterable[LocationFeed]:
+    fs = Feed.objects.filter(feed_type=FeedType.REDDIT_MULTI)
+    return (
+        LocationFeed(f"user/{f.metadata['owner']}/m/{f.metadata['name']}", str(f.id))
+        for f in fs
+    )
 
 
 # pylint: disable=no-self-use
 class AppDetailsViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def list(self, request: Request):
         if request.user.is_authenticated:
-            username = request.query_params.get("user")
-            multis = list(use_oauth_reddit(request.user.profile, username, get_multis))
+            feeds = list(get_multi_feeds())
             reddit_users = sorted(request.user.profile.tokens.keys())
         else:
-            multis = []
+            feeds = []
             reddit_users = []
-        return Response(AppDetails(request.user.is_authenticated, reddit_users, multis))
+        return Response(AppDetails(request.user.is_authenticated, reddit_users, feeds))
+
+
+# pylint: disable=no-self-use
+class MeViewSet(ViewSet):
+    def list(self, request: Request):
+        return Response({})
+
+    @action(detail=False)
+    def multis(self, request):
+        username = request.query_params.get("user")
+        multis = list(use_oauth_reddit(request.user.profile, username, get_multis))
+        return Response(Locations(multis))
+
+    @action(detail=False)
+    def subreddits(self, request):
+        username = request.query_params.get("user")
+        subreddits = list(
+            use_oauth_reddit(request.user.profile, username, get_subreddits)
+        )
+        return Response(Locations(subreddits))
 
 
 ALLOWED_SORT = set(("hot", "top", "new", "rising", "controversial"))
@@ -39,12 +72,20 @@ ALLOWED_TIME = set(("all", "year", "month", "day", "hour"))
 
 
 def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submission]]:
-    subreddit = request.query_params.get("subreddit")
+    page_path = request.query_params.get("page_path") or ""
     after = request.query_params.get("after")
-    multi_owner = request.query_params.get("multi_owner")
-    multi_name = request.query_params.get("multi_name")
     sort = request.query_params.get("sort")
-    time = request.query_params.get("time")
+    time = request.query_params.get("t")
+
+    subreddit = None
+    multi_owner = None
+    multi_name = None
+    path_parts = page_path.split("/")
+    if len(path_parts) == 2 and path_parts[0] == "r":
+        subreddit = path_parts[1]
+    elif len(path_parts) == 4 and path_parts[0] == "user" and path_parts[2] == "m":
+        multi_owner = path_parts[1]
+        multi_name = path_parts[3]
 
     sort = sort if sort in ALLOWED_SORT else "hot"
 
@@ -80,7 +121,7 @@ def get_submissions_by_id(reddit_ids: str) -> Callable[[Reddit], List[Submission
 
 # pylint: disable=no-self-use
 class SubmissionViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def list(self, request: Request):
         username = request.query_params.get("user")
@@ -100,12 +141,33 @@ class SubmissionViewSet(ViewSet):
 
         return Response(SubmissionResults(list(get_submissions(results))))
 
+    @action(detail=False, methods=["get"])
+    def get_display_name(self, request):
+        page_path = request.query_params.get("page_path") or ""
+        path_parts = page_path.split("/")
+
+        if len(path_parts) == 2 and path_parts[0] == "r":
+            return Response(Location(page_path, path_parts[1]))
+
+        if len(path_parts) == 4 and path_parts[0] == "user" and path_parts[2] == "m":
+            username = request.query_params.get("user")
+
+            def get_name(reddit: Reddit) -> str:
+                return reddit.multireddit(path_parts[1], path_parts[3]).display_name
+
+            display_name = (
+                use_oauth_reddit(request.user.profile, username, get_name)
+                if request.user.is_authenticated
+                else use_anon_reddit(get_name)
+            )
+            return Response(Location(page_path, display_name))
+
+        return Response(Location("", "Home"))
+
     @action(detail=False, methods=["put"])
     def mark_seen(self, request):
-        if request.user.is_authenticated:
-            ids = request.data.get("ids") or []
-            SeenSubmissionDao.mark_seen(request.user.id, ids)
-        return Response()
+        ids = request.data.get("ids") or []
+        SeenSubmissionDao.mark_seen(request.user.id, ids)
 
 
 class LinkSerializer(ModelSerializer):
@@ -173,6 +235,7 @@ class FeedViewSet(ReadOnlyModelViewSet):
 
 router = DefaultRouter()
 router.register("app", AppDetailsViewSet, "App")
+router.register("me", MeViewSet, "Me")
 router.register("feeds", FeedViewSet)
 router.register("links", LinkViewSet, "Link")
 router.register("submissions", SubmissionViewSet, "Submission")

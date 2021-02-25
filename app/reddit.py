@@ -10,6 +10,7 @@ from statistics import mean
 from typing import (
     Callable,
     Iterable,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -17,7 +18,7 @@ from typing import (
 )
 
 from .dao import ProfileDao, RelativeScoringDao
-from .data import Multi, Submission, Token
+from .data import Location, Submission, Token
 from .embed import get_embed
 from .models import Feed, FeedType, Link, Profile, RelativeScoring
 from .utils import from_obj, from_timestamp_utc
@@ -78,15 +79,22 @@ def get_submissions(subs: Iterable[praw.models.Submission]) -> Iterable[Submissi
         )
 
 
-def get_multis(reddit: Reddit) -> Iterable[Multi]:
-    feeds = Feed.objects.filter(feed_type=FeedType.REDDIT_MULTI)
-    feed_ids = {(f.metadata["owner"], f.metadata["name"]): str(f.id) for f in feeds}
+def get_multis(reddit: Reddit) -> List[Location]:
+    locs = (
+        Location(f"user/{m.owner}/m/{m.name}", m.display_name)
+        for m in reddit.user.me().multireddits()
+    )
 
-    def create_multi(multi: praw.models.Multireddit) -> Multi:
-        feed_id: Optional[str] = feed_ids.get((multi.owner, multi.name))
-        return Multi(multi.owner, multi.name, multi.display_name, feed_id)
+    return sorted(locs, key=lambda l: str.lower(l.display_name))
 
-    return (create_multi(m) for m in reddit.user.me().multireddits())
+
+def get_subreddits(reddit: Reddit) -> List[Location]:
+    locs = (
+        Location(f"r/{sr.display_name}", sr.display_name)
+        for sr in reddit.user.subreddits()
+    )
+
+    return sorted(locs, key=lambda l: str.lower(l.display_name))
 
 
 def get_reddit() -> Reddit:

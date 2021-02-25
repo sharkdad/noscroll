@@ -1,37 +1,98 @@
-import React, { memo, useContext } from "react"
+import React, { Dispatch, SetStateAction, useContext, useEffect, useState } from "react"
 import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
-import { SVC_WEB_ROOT } from "./utils"
-import { useParams, useHistory, useLocation } from "react-router-dom"
+import { get, SVC_WEB_ROOT, wrapAsync } from "./utils"
+import { LoadId, Location, Locations, SortBy, SORT_METHODS, TimeFilter, TIME_FILTERS } from "./data"
 
-export function Navbar() {
-  const history = useHistory()
-  const location = useLocation()
-  const { multiOwner, multiName } = useParams()
+export interface UpdateLoadId {
+  set_page_path: (new_page_path: string) => void
+  set_reddit_user: (new_reddit_user: string) => void
+  set_sort_method: (new_sort_method: SortBy) => void
+  set_time_filter: (new_time_filter: TimeFilter) => void
+}
 
+export interface NavbarProps {
+  load_id: LoadId
+  update: UpdateLoadId
+}
+
+function create_locations_loader(
+  path: string,
+  set_locations: Dispatch<SetStateAction<Location[] | null>>,
+  is_authenticated: boolean,
+  reddit_user?: string,
+): () => void {
+  return wrapAsync(async () => {
+    if (!is_authenticated) {
+      set_locations([])
+      return
+    }
+
+    const search_params = new URLSearchParams()
+    if (reddit_user != null) {
+      search_params.set("user", reddit_user)
+    }
+    const response: Locations = await (await get(`${path}?${search_params}`)).json()
+    set_locations(response.locations)
+  })
+}
+
+export function Navbar(props: NavbarProps) {
+  const { update, load_id } = props
   const {
-    state,
-    sort_methods,
-    time_filters,
-    set_reddit_user,
-    set_sort_method,
-    set_time_filter,
-  } = useContext(AppContext)
-  const { details, reddit_user, sort_method, time_filter } = state
-  const { reddit_users, multis } = details
+    reddit_user,
+    page_path,
+    sort_method,
+    time_filter,
+  } = load_id
 
-  var feed = location.pathname
-  const feedMulti = multis.find(m => m.owner === multiOwner && m.name === multiName)
-  if (feedMulti) {
-    feed = feedMulti.display_name
-  } else if (feed === "/") {
-    feed = "Home"
+  const { reddit_users, is_authenticated } = useContext(AppContext).app_details
+
+  const [page_location, set_page_location] = useState<Location | null>(null)
+  const [multis, set_multis] = useState<Location[] | null>(null)
+  const [subreddits, set_subreddits] = useState<Location[] | null>(null)
+
+  useEffect(
+    create_locations_loader("/svc/api/me/multis", set_multis, is_authenticated, reddit_user),
+    [is_authenticated, reddit_user]
+  )
+
+  useEffect(
+    create_locations_loader("/svc/api/me/subreddits", set_subreddits, is_authenticated, reddit_user),
+    [is_authenticated, reddit_user]
+  )
+
+  useEffect(
+    wrapAsync(async () => {
+      if (page_path !== page_location?.page_path) {
+        set_page_location(null)
+        const search_params = new URLSearchParams()
+        search_params.set("page_path", page_path)
+        if (reddit_user != null) {
+          search_params.set("user", reddit_user)
+        }
+        const response: Location = await (await get(`/svc/api/submissions/get_display_name?${search_params}`)).json()
+        set_page_location(response)
+      }
+    }),
+    [is_authenticated, reddit_user, page_path, page_location]
+  )
+
+  function go_to_page(location: Location): void {
+    set_page_location(location)
+    update.set_page_path(location.page_path)
   }
+
+  const loading_spinner = (
+    <div className="spinner-grow spinner-grow-sm" role="status">
+      <span className="sr-only">Loading...</span>
+    </div>
+  )
 
   return (
     <nav className="navbar fixed-top navbar-expand-lg navbar-dark bg-dark py-2">
       <div className="container">
-        <a className="navbar-brand" href="#">
+        <a className="navbar-brand" href="/">
           noscroll
         </a>
         <button
@@ -49,55 +110,80 @@ export function Navbar() {
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav mr-auto">
             <li className="nav-item active dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
+              <button
+                className="btn btn-link nav-link dropdown-toggle"
                 id="feedDropdown"
-                role="button"
                 data-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false"
               >
-                {feed}
-              </a>
+                {page_location ? page_location.display_name : loading_spinner}
+              </button>
               <div className="dropdown-menu" aria-labelledby="feedDropdown">
-                <FeedButton pathname="/" label="Home" history={history} location={location} />
-                <FeedButton pathname="/r/all/" history={history} location={location} />
-                <FeedButton pathname="/r/popular/" history={history} location={location} />
-                <div className="dropdown-divider" />
-                {multis.map((multi) => {
-                  const pathname = `/user/${multi.owner}/m/${multi.name}/`
-                  return (
-                    <FeedButton
-                      key={pathname}
-                      pathname={pathname}
-                      label={multi.display_name}
-                      history={history}
-                      location={location}
-                    />
-                  )
-                })}
+                <FeedButton location={{ display_name: "Home", page_path: "" }} page_path={page_path} go_to_page={go_to_page} />
+                <FeedButton location={{ display_name: "Popular", page_path: "r/Popular" }} page_path={page_path} go_to_page={go_to_page} />
+                <FeedButton location={{ display_name: "All", page_path: "r/All" }} page_path={page_path} go_to_page={go_to_page} />
+
+                {multis == null && (
+                  <div className="text-center">
+                    <div className="dropdown-divider" />
+                    {loading_spinner}
+                  </div>
+                )}
+                {multis != null && multis.length > 0 && (
+                  <>
+                    <div className="dropdown-divider" />
+                    <h6 className="dropdown-header">Custom feeds</h6>
+                    {multis.map((multi) => (
+                      <FeedButton
+                        key={multi.page_path}
+                        location={multi}
+                        page_path={page_path}
+                        go_to_page={go_to_page}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {subreddits == null && (
+                  <div className="text-center">
+                    <div className="dropdown-divider" />
+                    {loading_spinner}
+                  </div>
+                )}
+                {subreddits != null && subreddits.length > 0 && (
+                  <>
+                    <div className="dropdown-divider" />
+                    <h6 className="dropdown-header">Subreddits</h6>
+                    {subreddits.map((subreddit) => (
+                      <FeedButton
+                        key={subreddit.page_path}
+                        location={subreddit}
+                        page_path={page_path}
+                        go_to_page={go_to_page}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             </li>
             <li className="nav-item active dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
+              <button
+                className="btn btn-link nav-link dropdown-toggle"
                 id="sortDropdown"
-                role="button"
                 data-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false"
               >
                 {sort_method.label}
-              </a>
+              </button>
               <div className="dropdown-menu" aria-labelledby="navbarDropdown">
-                {sort_methods.map((sort) => (
+                {SORT_METHODS.map((sort) => (
                   <button
                     key={sort.name}
                     type="button"
                     className={`dropdown-item${sort.name === sort_method.name ? " active" : ""}`}
-                    onClick={() => set_sort_method(sort)}
+                    onClick={() => update.set_sort_method(sort)}
                   >
                     {sort.label}
                   </button>
@@ -106,24 +192,22 @@ export function Navbar() {
             </li>
             {sort_method.has_time_filter && (
               <li className="nav-item active dropdown">
-                <a
-                  className="nav-link dropdown-toggle"
-                  href="#"
+                <button
+                  className="btn btn-link nav-link dropdown-toggle"
                   id="timeDropdown"
-                  role="button"
                   data-toggle="dropdown"
                   aria-haspopup="true"
                   aria-expanded="false"
                 >
                   {time_filter.label}
-                </a>
+                </button>
                 <div className="dropdown-menu" aria-labelledby="timeDropdown">
-                  {time_filters.map((time) => (
+                  {TIME_FILTERS.map((time) => (
                     <button
                       key={time.name}
                       type="button"
                       className={`dropdown-item${time.name === time_filter.name ? " active" : ""}`}
-                      onClick={() => set_time_filter(time)}
+                      onClick={() => update.set_time_filter(time)}
                     >
                       {time.label}
                     </button>
@@ -137,7 +221,7 @@ export function Navbar() {
               <ThemeSelector />
             </div>
             <div className="input-group py-2 py-lg-0">
-              {!details.is_authenticated && (
+              {!is_authenticated && (
                 <a
                   href={`${SVC_WEB_ROOT}/svc/accounts/login/`}
                   className="btn btn-primary"
@@ -145,19 +229,17 @@ export function Navbar() {
                   Login
                 </a>
               )}
-              {details.is_authenticated && (
+              {is_authenticated && (
                 <>
-                  <a
-                    className="nav-link dropdown-toggle"
-                    href="#"
+                  <button
+                    className="btn btn-link nav-link dropdown-toggle"
                     id="userDropdown"
-                    role="button"
                     data-toggle="dropdown"
                     aria-haspopup="true"
                     aria-expanded="false"
                   >
                     {reddit_user}
-                  </a>
+                  </button>
                   <div className="dropdown-menu" aria-labelledby="userDropdown">
                     {reddit_users.length > 1 && (
                       <>
@@ -166,7 +248,7 @@ export function Navbar() {
                             key={user}
                             className={`dropdown-item${user === reddit_user ? " active" : ""}`}
                             type="button"
-                            onClick={() => set_reddit_user(user)}
+                            onClick={() => update.set_reddit_user(user)}
                           >
                             {user}
                           </button>
@@ -192,18 +274,20 @@ export function Navbar() {
 }
 
 interface FeedButtonProps {
-  pathname: string
-  label?: string
-  history: any
-  location: any
+  location: Location
+  page_path: string
+  go_to_page: (location: Location) => void
 }
 
-const FeedButton = memo<FeedButtonProps>(({ pathname, label, history, location }) => (
-  <button
-    type="button"
-    className={`dropdown-item${location.pathname === pathname ? " active" : ""}`}
-    onClick={() => history.push(pathname)}
-  >
-    {label || pathname}
-  </button>
-))
+function FeedButton(props: FeedButtonProps) {
+  const active = props.page_path === props.location.page_path
+  return (
+    <button
+      type="button"
+      className={`dropdown-item${active ? " active" : ""}`}
+      onClick={() => props.go_to_page(props.location)}
+    >
+      {props.location.display_name}
+    </button>
+  )
+}

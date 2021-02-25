@@ -1,7 +1,11 @@
 import { createRef, Dispatch, RefObject, SetStateAction } from "react"
-import { LoadId, SubmissionLoadingState } from "./data"
+import { LoadId } from "./data"
 import { callAsync, get, put } from "./utils"
 
+export interface SubmissionLoadingState {
+  results: any[]
+  is_loading: boolean
+}
 
 export class ScrollHandler {
   private observer: IntersectionObserver
@@ -91,12 +95,12 @@ export class ScrollHandler {
       const searchParams = new URLSearchParams()
       searchParams.set("min_score", "500")
       searchParams.set("feeds", this.load_id.feed_id)
-  
+
       if (this.load_id.search) {
         new URLSearchParams(this.load_id.search).forEach(
           (value, key) => searchParams.set(key, value))
       }
-      
+
       url = `/svc/api/links/?${searchParams}`
     } else {
       const searchParams = new URLSearchParams()
@@ -105,30 +109,25 @@ export class ScrollHandler {
       }
       searchParams.set("sort", this.load_id.sort_method.name)
       if (this.load_id.sort_method.has_time_filter) {
-        searchParams.set("time", this.load_id.time_filter.name)
+        searchParams.set("t", this.load_id.time_filter.name)
       }
-  
-      if (this.load_id.subreddit != null) {
-        searchParams.set("subreddit", this.load_id.subreddit)
+
+      if (this.load_id.page_path != null) {
+        searchParams.set("page_path", this.load_id.page_path)
       }
-  
-      if (this.load_id.multi_owner != null && this.load_id.multi_name != null) {
-        searchParams.set("multi_owner", this.load_id.multi_owner)
-        searchParams.set("multi_name", this.load_id.multi_name)
-      }
-  
+
       if (this.after != null) {
         searchParams.set("after", this.after)
       }
-  
+
       if (this.load_id.search) {
         new URLSearchParams(this.load_id.search).forEach(
           (value, key) => searchParams.set(key, value))
       }
-      
+
       url = `/svc/api/submissions/?${searchParams}`
     }
-  
+
     const response = await (await get(url)).json()
     const last = response.results[response.results.length - 1]
     this.after = last?.id
