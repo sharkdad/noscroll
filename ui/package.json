@@ -42,6 +42,7 @@
     "prettier": "^2.1.2"
   },
   "prettier": {
-    "semi": false
+    "semi": false,
+    "printWidth": 88
   }
 }

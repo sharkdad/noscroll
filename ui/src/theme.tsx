@@ -1,6 +1,5 @@
 import React, { memo } from "react"
 
-
 export function enableTheme(): void {
   const dark: any = document.getElementById("dark-stylesheet")
   const light: any = document.getElementById("light-stylesheet")
@@ -41,7 +40,6 @@ export const ThemeSelector = memo(() => {
     </div>
   )
 })
-
 
 const LIGHT_MODE_KEY = "light-mode-enabled"
 

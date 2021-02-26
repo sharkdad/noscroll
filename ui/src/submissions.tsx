@@ -21,7 +21,13 @@ export function LinkLoader(props: LinkLoaderProps) {
   const scroll = useRef(new ScrollHandler(load_id, set_page_index, set_loading_state))
 
   const items = loading_state.results.slice(0, (page_index + 1) * PAGE_SIZE)
-  return <Layout items={items} items_loaded={loading_state.results.length} scroll={scroll.current} />
+  return (
+    <Layout
+      items={items}
+      items_loaded={loading_state.results.length}
+      scroll={scroll.current}
+    />
+  )
 }
 
 interface LayoutProps {
@@ -36,28 +42,38 @@ function Layout(props: LayoutProps) {
 
   scroll.expand_item_refs(items.length)
 
-  const screen_width = .9 * window.innerWidth
-  const screen_height = .8 * window.innerHeight
-  const min_height = .5 * screen_height
-  const max_width = .8 * screen_width
+  const screen_width = 0.9 * window.innerWidth
+  const screen_height = 0.8 * window.innerHeight
+  const min_height = 0.5 * screen_height
+  const max_width = 0.8 * screen_width
   const rows = []
   let items_offset = 0
   let row_items = []
   let ars = []
   let sum_ars = 0
   let height = 0
-  items.forEach(submission => {
-    const ar = submission.embed && submission.embed.width && submission.embed.height
-      ? submission.embed.width / submission.embed.height
-      : 1
+  items.forEach((submission) => {
+    const ar =
+      submission.embed && submission.embed.width && submission.embed.height
+        ? submission.embed.width / submission.embed.height
+        : 1
     const new_sum_ars = sum_ars + ar
-    const width = screen_width * ar / new_sum_ars
+    const width = (screen_width * ar) / new_sum_ars
     const new_height = Math.min(width / ar, screen_height)
-    const sum_widths = ars.reduce((sum, ar) => sum + (ar * height), 0)
+    const sum_widths = ars.reduce((sum, ar) => sum + ar * height, 0)
     if (new_height < min_height || sum_widths > max_width) {
-      rows.push(<SubmissionRow key={rows.length} items={row_items} ars={ars}
-        height={height} items_shown={items.length} items_loaded={items_loaded}
-        items_offset={items_offset} scroll={scroll} />)
+      rows.push(
+        <SubmissionRow
+          key={rows.length}
+          items={row_items}
+          ars={ars}
+          height={height}
+          items_shown={items.length}
+          items_loaded={items_loaded}
+          items_offset={items_offset}
+          scroll={scroll}
+        />
+      )
       items_offset += row_items.length
       row_items = [submission]
       ars = [ar]
@@ -71,9 +87,18 @@ function Layout(props: LayoutProps) {
     }
   })
   if (row_items.length > 0) {
-    rows.push(<SubmissionRow key={rows.length} items={row_items} ars={ars}
-      height={height} items_shown={items.length} items_loaded={items_loaded}
-      items_offset={items_offset} scroll={scroll} />)
+    rows.push(
+      <SubmissionRow
+        key={rows.length}
+        items={row_items}
+        ars={ars}
+        height={height}
+        items_shown={items.length}
+        items_loaded={items_loaded}
+        items_offset={items_offset}
+        scroll={scroll}
+      />
+    )
   }
 
   useEffect(() => {
@@ -85,15 +110,14 @@ function Layout(props: LayoutProps) {
   })
 
   useEffect(() => {
-    const timer = setInterval(wrapAsync(() => scroll.mark_as_read(is_authenticated)), 5000);
-    return () => clearInterval(timer);
+    const timer = setInterval(
+      wrapAsync(() => scroll.mark_as_read(is_authenticated)),
+      5000
+    )
+    return () => clearInterval(timer)
   }, [scroll, is_authenticated])
 
-  return (
-    <>
-      {rows}
-    </>
-  )
+  return <>{rows}</>
 }
 
 interface SubmissionRowProps {
@@ -109,7 +133,7 @@ interface SubmissionRowProps {
 const SubmissionRow = memo((props: SubmissionRowProps) => {
   const { items, ars, height, items_shown, items_loaded, items_offset, scroll } = props
   const screen_width = window.innerWidth
-  const widths = ars.map(ar => height * ar)
+  const widths = ars.map((ar) => height * ar)
   const total_width = widths.reduce((sum, width) => sum + width, 0)
   const spacing_width = screen_width - total_width
   const spacing_per = spacing_width / items.length
@@ -120,9 +144,13 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
           key={item.id}
           data-reddit-id={item.id}
           data-show-next-page={items_offset + index === Math.max(0, items_shown - 5)}
-          data-load-more={items_offset + index === Math.max(0, items_loaded - (PAGE_SIZE * 2))}
+          data-load-more={
+            items_offset + index === Math.max(0, items_loaded - PAGE_SIZE * 2)
+          }
           ref={scroll.get_item_ref(items_offset + index)}
-          style={{ width: `${100 * (widths[index] + spacing_per) / screen_width}%` }}
+          style={{
+            width: `${(100 * (widths[index] + spacing_per)) / screen_width}%`,
+          }}
         >
           <SubmissionDisplay submission={item} max_width={widths[index]} />
         </div>
@@ -162,10 +190,19 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         </p>
       </div>
       {submission.embed && (
-        <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px` }}>
-          {embed_type === "html" && <HtmlEmbed embed={submission.embed} title={submission.title} />}
-          {embed_type === "video" && <VideoEmbed embed={submission.embed} title={submission.title} />}
-          {embed_type === "image" && <ImageEmbed embed={submission.embed} title={submission.title} />}
+        <div
+          className="text-center w-100 mx-auto"
+          style={{ maxWidth: `${max_width}px` }}
+        >
+          {embed_type === "html" && (
+            <HtmlEmbed embed={submission.embed} title={submission.title} />
+          )}
+          {embed_type === "video" && (
+            <VideoEmbed embed={submission.embed} title={submission.title} />
+          )}
+          {embed_type === "image" && (
+            <ImageEmbed embed={submission.embed} title={submission.title} />
+          )}
         </div>
       )}
     </>
@@ -191,7 +228,11 @@ const HtmlEmbed = memo((props: EmbedProps) => {
   const pt = get_ratio_padding_top(embed)
 
   return (
-    <div className="embed" style={{ paddingTop: pt }} dangerouslySetInnerHTML={{ __html: html }} />
+    <div
+      className="embed"
+      style={{ paddingTop: pt }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 })
 

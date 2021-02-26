@@ -2,7 +2,15 @@ import React, { Dispatch, SetStateAction, useContext, useEffect, useState } from
 import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
 import { get, SVC_WEB_ROOT, wrapAsync } from "./utils"
-import { LoadId, Location, Locations, SortBy, SORT_METHODS, TimeFilter, TIME_FILTERS } from "./data"
+import {
+  LoadId,
+  Location,
+  Locations,
+  SortBy,
+  SORT_METHODS,
+  TimeFilter,
+  TIME_FILTERS,
+} from "./data"
 
 export interface UpdateLoadId {
   set_page_path: (new_page_path: string) => void
@@ -20,7 +28,7 @@ function create_locations_loader(
   path: string,
   set_locations: Dispatch<SetStateAction<Location[] | null>>,
   is_authenticated: boolean,
-  reddit_user?: string,
+  reddit_user?: string
 ): () => void {
   return wrapAsync(async () => {
     if (!is_authenticated) {
@@ -39,12 +47,7 @@ function create_locations_loader(
 
 export function Navbar(props: NavbarProps) {
   const { update, load_id } = props
-  const {
-    reddit_user,
-    page_path,
-    sort_method,
-    time_filter,
-  } = load_id
+  const { reddit_user, page_path, sort_method, time_filter } = load_id
 
   const { reddit_users, is_authenticated } = useContext(AppContext).app_details
 
@@ -53,12 +56,22 @@ export function Navbar(props: NavbarProps) {
   const [subreddits, set_subreddits] = useState<Location[] | null>(null)
 
   useEffect(
-    create_locations_loader("/svc/api/me/multis", set_multis, is_authenticated, reddit_user),
+    create_locations_loader(
+      "/svc/api/me/multis",
+      set_multis,
+      is_authenticated,
+      reddit_user
+    ),
     [is_authenticated, reddit_user]
   )
 
   useEffect(
-    create_locations_loader("/svc/api/me/subreddits", set_subreddits, is_authenticated, reddit_user),
+    create_locations_loader(
+      "/svc/api/me/subreddits",
+      set_subreddits,
+      is_authenticated,
+      reddit_user
+    ),
     [is_authenticated, reddit_user]
   )
 
@@ -71,7 +84,9 @@ export function Navbar(props: NavbarProps) {
         if (reddit_user != null) {
           search_params.set("user", reddit_user)
         }
-        const response: Location = await (await get(`/svc/api/submissions/get_display_name?${search_params}`)).json()
+        const response: Location = await (
+          await get(`/svc/api/submissions/get_display_name?${search_params}`)
+        ).json()
         set_page_location(response)
       }
     }),
@@ -120,9 +135,21 @@ export function Navbar(props: NavbarProps) {
                 {page_location ? page_location.display_name : loading_spinner}
               </button>
               <div className="dropdown-menu" aria-labelledby="feedDropdown">
-                <FeedButton location={{ display_name: "Home", page_path: "" }} page_path={page_path} go_to_page={go_to_page} />
-                <FeedButton location={{ display_name: "Popular", page_path: "r/Popular" }} page_path={page_path} go_to_page={go_to_page} />
-                <FeedButton location={{ display_name: "All", page_path: "r/All" }} page_path={page_path} go_to_page={go_to_page} />
+                <FeedButton
+                  location={{ display_name: "Home", page_path: "" }}
+                  page_path={page_path}
+                  go_to_page={go_to_page}
+                />
+                <FeedButton
+                  location={{ display_name: "Popular", page_path: "r/Popular" }}
+                  page_path={page_path}
+                  go_to_page={go_to_page}
+                />
+                <FeedButton
+                  location={{ display_name: "All", page_path: "r/All" }}
+                  page_path={page_path}
+                  go_to_page={go_to_page}
+                />
 
                 {multis == null && (
                   <div className="text-center">
@@ -182,7 +209,9 @@ export function Navbar(props: NavbarProps) {
                   <button
                     key={sort.name}
                     type="button"
-                    className={`dropdown-item${sort.name === sort_method.name ? " active" : ""}`}
+                    className={`dropdown-item${
+                      sort.name === sort_method.name ? " active" : ""
+                    }`}
                     onClick={() => update.set_sort_method(sort)}
                   >
                     {sort.label}
@@ -206,7 +235,9 @@ export function Navbar(props: NavbarProps) {
                     <button
                       key={time.name}
                       type="button"
-                      className={`dropdown-item${time.name === time_filter.name ? " active" : ""}`}
+                      className={`dropdown-item${
+                        time.name === time_filter.name ? " active" : ""
+                      }`}
                       onClick={() => update.set_time_filter(time)}
                     >
                       {time.label}
@@ -246,7 +277,9 @@ export function Navbar(props: NavbarProps) {
                         {reddit_users.map((user) => (
                           <button
                             key={user}
-                            className={`dropdown-item${user === reddit_user ? " active" : ""}`}
+                            className={`dropdown-item${
+                              user === reddit_user ? " active" : ""
+                            }`}
                             type="button"
                             onClick={() => update.set_reddit_user(user)}
                           >

@@ -22,15 +22,19 @@ export class ScrollHandler {
   constructor(
     private load_id: LoadId,
     private set_page_index: Dispatch<SetStateAction<number>>,
-    private set_loading_state: Dispatch<SetStateAction<SubmissionLoadingState>>,
+    private set_loading_state: Dispatch<SetStateAction<SubmissionLoadingState>>
   ) {
-    this.observer = new IntersectionObserver(this.intersection_change, { threshold: [0, 1] })
+    this.observer = new IntersectionObserver(this.intersection_change, {
+      threshold: [0, 1],
+    })
   }
 
   expand_item_refs(item_count: number): void {
     const new_item_count = item_count - this.item_divs.length
     if (new_item_count > 0) {
-      const new_refs = Array.from({ length: new_item_count }, () => createRef<HTMLDivElement>())
+      const new_refs = Array.from({ length: new_item_count }, () =>
+        createRef<HTMLDivElement>()
+      )
       this.item_divs = [...this.item_divs, ...new_refs]
     }
   }
@@ -47,7 +51,7 @@ export class ScrollHandler {
   observe_new_items(): void {
     if (this.next_observe_idx < this.item_divs.length) {
       const new_divs = this.item_divs.slice(this.next_observe_idx)
-      new_divs.forEach(ref => this.observer.observe(ref.current))
+      new_divs.forEach((ref) => this.observer.observe(ref.current))
       this.next_observe_idx = this.item_divs.length
     }
   }
@@ -58,19 +62,19 @@ export class ScrollHandler {
       if (is_authenticated && this.load_id.sort_method.name === "curated") {
         await put("/svc/api/submissions/mark_seen/", { ids })
       }
-      ids.forEach(id => this.read_ids.delete(id))
+      ids.forEach((id) => this.read_ids.delete(id))
     }
   }
 
   private intersection_change: IntersectionObserverCallback = (entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       const element = entry.target as HTMLElement
       const reddit_id = element.dataset.redditId
       if (entry.isIntersecting) {
         if (!this.seen_ids.has(reddit_id)) {
           this.seen_ids.add(reddit_id)
           if (element.dataset.showNextPage === "true") {
-            this.set_page_index(last_index => last_index + 1)
+            this.set_page_index((last_index) => last_index + 1)
           }
           if (element.dataset.loadMore === "true" && this.is_more_results) {
             callAsync(() => this.load_more())
@@ -87,7 +91,7 @@ export class ScrollHandler {
   }
 
   private async load_more(): Promise<void> {
-    this.set_loading_state(state => ({ ...state, is_loading: true }))
+    this.set_loading_state((state) => ({ ...state, is_loading: true }))
     var url = ""
     if (this.next != null) {
       url = this.next
@@ -97,8 +101,9 @@ export class ScrollHandler {
       searchParams.set("feeds", this.load_id.feed_id)
 
       if (this.load_id.search) {
-        new URLSearchParams(this.load_id.search).forEach(
-          (value, key) => searchParams.set(key, value))
+        new URLSearchParams(this.load_id.search).forEach((value, key) =>
+          searchParams.set(key, value)
+        )
       }
 
       url = `/svc/api/links/?${searchParams}`
@@ -121,8 +126,9 @@ export class ScrollHandler {
       }
 
       if (this.load_id.search) {
-        new URLSearchParams(this.load_id.search).forEach(
-          (value, key) => searchParams.set(key, value))
+        new URLSearchParams(this.load_id.search).forEach((value, key) =>
+          searchParams.set(key, value)
+        )
       }
 
       url = `/svc/api/submissions/?${searchParams}`
@@ -133,7 +139,7 @@ export class ScrollHandler {
     this.after = last?.id
     this.next = response.next
     this.is_more_results = this.after != null || this.next != null
-    this.set_loading_state(last_state => ({
+    this.set_loading_state((last_state) => ({
       results: [...last_state.results, ...response.results],
       is_loading: false,
     }))

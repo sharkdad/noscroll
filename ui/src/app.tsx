@@ -2,8 +2,15 @@ import React, { createContext, useEffect, useRef } from "react"
 import { Navbar, UpdateLoadId } from "./navbar"
 import { LinkLoader } from "./submissions"
 import { useParams, useLocation, useHistory } from "react-router-dom"
-import { AppDetails, AppGlobals, LoadId, SortBy, SORT_METHODS, TimeFilter, TIME_FILTERS } from "./data"
-
+import {
+  AppDetails,
+  AppGlobals,
+  LoadId,
+  SortBy,
+  SORT_METHODS,
+  TimeFilter,
+  TIME_FILTERS,
+} from "./data"
 
 export const AppContext = createContext<AppGlobals>(null)
 
@@ -11,7 +18,7 @@ export interface AppProps {
   app_details: AppDetails
 }
 
-const SORT_METHODS_BY_NAME = new Map(SORT_METHODS.map(s => [s.name, s]))
+const SORT_METHODS_BY_NAME = new Map(SORT_METHODS.map((s) => [s.name, s]))
 
 function get_app_path(page_path: string, sort_str: string): string {
   return `/${page_path ? `${page_path}/` : ""}${sort_str ? `${sort_str}/` : ""}`
@@ -23,9 +30,13 @@ export function App(props: AppProps) {
 
   const full_path: string = useParams().full_path ?? ""
   const path_parts = full_path.split("/")
-  const sort_method_from_path = SORT_METHODS_BY_NAME.get(path_parts[path_parts.length - 1])
+  const sort_method_from_path = SORT_METHODS_BY_NAME.get(
+    path_parts[path_parts.length - 1]
+  )
   const sort_str = sort_method_from_path?.name
-  const page_path = sort_str ? path_parts.slice(0, path_parts.length - 1).join("/") : full_path
+  const page_path = sort_str
+    ? path_parts.slice(0, path_parts.length - 1).join("/")
+    : full_path
 
   const history = useHistory()
   const location = useLocation()
@@ -36,7 +47,9 @@ export function App(props: AppProps) {
 
   const saved_user = localStorage.getItem(REDDIT_USER_KEY)
   const intended_user = url_user ?? saved_user
-  const reddit_user = reddit_users.includes(intended_user) ? intended_user : reddit_users[0]
+  const reddit_user = reddit_users.includes(intended_user)
+    ? intended_user
+    : reddit_users[0]
   useEffect(() => {
     if (reddit_user && reddit_user !== saved_user) {
       localStorage.setItem(REDDIT_USER_KEY, reddit_user)
@@ -46,9 +59,9 @@ export function App(props: AppProps) {
     }
   })
 
-  const feed_id = feeds.find(f => f.page_path === page_path)?.feed_id
+  const feed_id = feeds.find((f) => f.page_path === page_path)?.feed_id
   const sort_method = SORT_METHODS_BY_NAME.get(sort_str) ?? SORT_METHODS[0]
-  const time_filter = TIME_FILTERS.find(t => t.name === time_str) ?? TIME_FILTERS[0]
+  const time_filter = TIME_FILTERS.find((t) => t.name === time_str) ?? TIME_FILTERS[0]
 
   const app_globals = useRef<AppGlobals>({ app_details })
   const update: UpdateLoadId = {
@@ -72,7 +85,7 @@ export function App(props: AppProps) {
       const new_search_params = new URLSearchParams(search)
       new_search_params.set("t", new_time_filter.name)
       history.push({ ...location, search: `?${new_search_params}` })
-    }
+    },
   }
 
   const load_id: LoadId = {
