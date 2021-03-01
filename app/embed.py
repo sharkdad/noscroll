@@ -83,6 +83,9 @@ def embed_gallery_image(md: Mapping) -> Optional[Embed]:
 
 
 def embed_preview_image(md: Mapping) -> Optional[Embed]:
+    if md.get("post_hint") == "link":
+        return None
+
     def build_embed(img: Mapping) -> Optional[Embed]:
         src = img.get("source") or {}
         url = src.get("url")

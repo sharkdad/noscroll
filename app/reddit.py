@@ -176,6 +176,7 @@ def get_submission_metadata(data: Mapping) -> Mapping:
             "spoiler",
             "over_18",
             "num_comments",
+            "post_hint",
             "preview",
             "thumbnail",
             "thumbnail_height",

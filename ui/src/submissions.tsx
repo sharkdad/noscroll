@@ -56,7 +56,7 @@ function Layout(props: LayoutProps) {
     const ar =
       submission.embed && submission.embed.width && submission.embed.height
         ? submission.embed.width / submission.embed.height
-        : 1
+        : 2 / 3
     const new_sum_ars = sum_ars + ar
     const width = (screen_width * ar) / new_sum_ars
     const new_height = Math.min(width / ar, screen_height)
@@ -138,7 +138,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
   const spacing_width = screen_width - total_width
   const spacing_per = spacing_width / items.length
   return (
-    <div className="grid-row mb-5">
+    <div className="grid-row mb-4" style={{ minHeight: `${height / 3}px` }}>
       {items.map((item, index) => (
         <div
           key={item.id}
@@ -169,14 +169,21 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   const embed_type = submission.embed?.embed_type
   return (
     <>
-      <div className={`mx-2 text-center${submission.embed ? " text-truncate" : ""}`}>
-        <b>
-          <a rel="noopener noreferrer" target="_blank" href={submission.url}>
+      <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px` }}>
+        <div
+          className={`bg-dark header${submission.embed ? " header-with-embed" : ""}`}
+          style={{ maxWidth: `${max_width}px` }}
+        >
+          <div className="linkblocker w-100" />
+          <a
+            className="header-link"
+            rel="noopener noreferrer"
+            target="_blank"
+            href={submission.url}
+          >
             {submission.title}
           </a>
-        </b>
-        <p>
-          <small>
+          <div className="header-details">
             {submission.subreddit} -{" "}
             <a
               rel="noopener noreferrer"
@@ -186,25 +193,40 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               {submission.num_comments} comments
             </a>{" "}
             - {submission.posted_at} - {submission.score}
-          </small>
-        </p>
-      </div>
-      {submission.embed && (
-        <div
-          className="text-center w-100 mx-auto"
-          style={{ maxWidth: `${max_width}px` }}
-        >
-          {embed_type === "html" && (
-            <HtmlEmbed embed={submission.embed} title={submission.title} />
-          )}
-          {embed_type === "video" && (
-            <VideoEmbed embed={submission.embed} title={submission.title} />
-          )}
-          {embed_type === "image" && (
-            <ImageEmbed embed={submission.embed} title={submission.title} />
-          )}
+          </div>
         </div>
-      )}
+        {submission.embed && (
+          <>
+            <div
+              className="bg-dark header header-with-embed-placeholder"
+              style={{ maxWidth: `${max_width}px` }}
+            >
+              <a
+                className="header-link"
+                rel="noopener noreferrer"
+                target="_blank"
+                href={submission.url}
+              >
+                {submission.title}
+              </a>
+            </div>
+            <div className="header invisible">
+              <span className="header-link">placeholder</span>
+            </div>
+            <div style={{ position: "relative", zIndex: 2 }}>
+              {embed_type === "html" && (
+                <HtmlEmbed embed={submission.embed} title={submission.title} />
+              )}
+              {embed_type === "video" && (
+                <VideoEmbed embed={submission.embed} title={submission.title} />
+              )}
+              {embed_type === "image" && (
+                <ImageEmbed embed={submission.embed} title={submission.title} />
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </>
   )
 })
