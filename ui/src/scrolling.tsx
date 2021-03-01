@@ -10,6 +10,7 @@ export interface SubmissionLoadingState {
 export class ScrollHandler {
   private observer: IntersectionObserver
   private item_divs: RefObject<HTMLDivElement>[] = []
+  private last_seen_div?: HTMLElement
   private next_observe_idx = 0
 
   private seen_ids = new Set<string>()
@@ -56,6 +57,15 @@ export class ScrollHandler {
     }
   }
 
+  scroll_to_last_seen(): void {
+    if (this.last_seen_div != null) {
+      const rect = this.last_seen_div.getBoundingClientRect()
+      window.scrollTo({ top: rect.top + window.scrollY })
+    }
+    this.item_divs.forEach((ref) => this.observer.observe(ref.current))
+    this.next_observe_idx = this.item_divs.length
+  }
+
   async mark_as_read(is_authenticated: boolean): Promise<void> {
     const ids = Array.from(this.read_ids)
     if (ids.length > 0) {
@@ -72,6 +82,7 @@ export class ScrollHandler {
       const reddit_id = element.dataset.redditId
       if (entry.isIntersecting) {
         if (!this.seen_ids.has(reddit_id)) {
+          this.last_seen_div = element
           this.seen_ids.add(reddit_id)
           if (element.dataset.showNextPage === "true") {
             this.set_page_index((last_index) => last_index + 1)

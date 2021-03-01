@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useContext, useRef } from "react"
+import React, { useState, useEffect, memo, useContext, useRef, useMemo } from "react"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
 import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
@@ -36,17 +36,29 @@ interface LayoutProps {
   scroll: ScrollHandler
 }
 
+interface WindowState {
+  inner_width: number
+  inner_height: number
+}
+
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
   const { is_authenticated } = useContext(AppContext).app_details
 
-  scroll.expand_item_refs(items.length)
+  const [window_state, set_window_state] = useState<WindowState>({
+    inner_width: window.innerWidth,
+    inner_height: window.innerHeight,
+  })
 
-  const screen_width = 0.9 * window.innerWidth
-  const screen_height = 0.8 * window.innerHeight
+  const last_window_state = useRef<WindowState>({ ...window_state })
+
+  scroll.expand_item_refs(items.length)
+  const rows = []
+  const screen_width = 0.9 * window_state.inner_width
+  const screen_height = 0.8 * window_state.inner_height
   const min_height = 0.5 * screen_height
   const max_width = 0.8 * screen_width
-  const rows = []
+
   let items_offset = 0
   let row_items = []
   let ars = []
@@ -106,16 +118,40 @@ function Layout(props: LayoutProps) {
   }, [scroll])
 
   useEffect(() => {
-    scroll.observe_new_items()
-  })
-
-  useEffect(() => {
     const timer = setInterval(
       wrapAsync(() => scroll.mark_as_read(is_authenticated)),
       5000
     )
     return () => clearInterval(timer)
   }, [scroll, is_authenticated])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (
+        window.innerHeight !== last_window_state.current.inner_height ||
+        window.innerWidth !== last_window_state.current.inner_width
+      ) {
+        set_window_state({
+          inner_height: window.innerHeight,
+          inner_width: window.innerWidth,
+        })
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (
+      window_state.inner_height !== last_window_state.current.inner_height ||
+      window_state.inner_width !== last_window_state.current.inner_width
+    ) {
+      scroll.scroll_to_last_seen()
+      last_window_state.current.inner_height = window_state.inner_height
+      last_window_state.current.inner_width = window_state.inner_width
+    } else {
+      scroll.observe_new_items()
+    }
+  })
 
   return <>{rows}</>
 }
