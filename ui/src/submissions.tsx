@@ -1,4 +1,5 @@
-import React, { useState, useEffect, memo, useContext, useRef, useMemo } from "react"
+import React, { useState, useEffect, memo, useContext, useRef } from "react"
+import { Link, useHistory, useLocation } from "react-router-dom"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
 import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
@@ -22,11 +23,103 @@ export function LinkLoader(props: LinkLoaderProps) {
 
   const items = loading_state.results.slice(0, (page_index + 1) * PAGE_SIZE)
   return (
-    <Layout
-      items={items}
-      items_loaded={loading_state.results.length}
-      scroll={scroll.current}
-    />
+    <>
+      <Layout
+        items={items}
+        items_loaded={loading_state.results.length}
+        scroll={scroll.current}
+      />
+    </>
+  )
+}
+
+interface FullscreenProps {
+  items: any[]
+  window_state: WindowState
+}
+
+export function Fullscreen(props: FullscreenProps) {
+  const { items, window_state } = props
+  const location = useLocation()
+  const history = useHistory()
+
+  const modal_up = useRef(false)
+  const cached_item = useRef(null)
+
+  function get_item() {
+    if (location.state?.idx == null) {
+      return null
+    }
+    const idx: number = location.state.idx
+    if (idx < 0 || idx >= items.length) {
+      return null
+    }
+    return items[idx]
+  }
+
+  const item = get_item()
+
+  useEffect(() => {
+    $("#fs-modal").on("hide.bs.modal", function (e) {
+      if (modal_up.current) {
+        modal_up.current = false
+        history.goBack()
+      }
+    })
+  }, [history])
+
+  useEffect(() => {
+    if (item == null && modal_up.current) {
+      modal_up.current = false
+      $("#fs-modal").modal("hide")
+    } else if (item != null && !modal_up.current) {
+      modal_up.current = true
+      $("#fs-modal").modal("show")
+    }
+  }, [item])
+
+  if (item != null) {
+    cached_item.current = item
+  }
+
+  var max_width = 0
+  if (cached_item.current != null) {
+    const screen_width = window_state.inner_width
+    const screen_height = window_state.inner_height - 40
+
+    const ar =
+      cached_item.current.embed &&
+      cached_item.current.embed.width &&
+      cached_item.current.embed.height
+        ? cached_item.current.embed.width / cached_item.current.embed.height
+        : 2 / 3
+
+    const max_height = Math.min(screen_width / ar, screen_height)
+    max_width = max_height * ar
+  }
+
+  return (
+    <div
+      className="modal fade"
+      id="fs-modal"
+      tabIndex={-1}
+      aria-labelledby="fs-modalLabel"
+      aria-hidden="true"
+    >
+      <div className="modal-dialog" style={{ maxWidth: `${max_width}px` }}>
+        <div className="modal-content">
+          <div className="modal-body">
+            {item && (
+              <SubmissionDisplay
+                submission={item}
+                max_width={max_width}
+                full_screen={true}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -153,7 +246,12 @@ function Layout(props: LayoutProps) {
     }
   })
 
-  return <>{rows}</>
+  return (
+    <>
+      {rows}
+      <Fullscreen items={items} window_state={window_state} />
+    </>
+  )
 }
 
 interface SubmissionRowProps {
@@ -188,7 +286,11 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
             width: `${(100 * (widths[index] + spacing_per)) / screen_width}%`,
           }}
         >
-          <SubmissionDisplay submission={item} max_width={widths[index]} />
+          <SubmissionDisplay
+            submission={item}
+            max_width={widths[index]}
+            idx={items_offset + index}
+          />
         </div>
       ))}
     </div>
@@ -197,11 +299,13 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
 
 interface SubmissionDisplayProps {
   submission: any
-  max_width: number
+  max_width?: number
+  idx?: number
+  full_screen?: boolean
 }
 
 const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
-  const { submission, max_width } = props
+  const { submission, max_width, idx, full_screen } = props
   const embed_type = submission.embed?.embed_type
   return (
     <>
@@ -210,7 +314,17 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
           className={`bg-dark header${submission.embed ? " header-with-embed" : ""}`}
           style={{ maxWidth: `${max_width}px` }}
         >
-          <div className="linkblocker w-100" />
+          <div className="linkblocker" />
+          {full_screen && (
+            <button
+              type="button"
+              className="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          )}
           <a
             className="header-link"
             rel="noopener noreferrer"
@@ -228,7 +342,10 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
             >
               {submission.num_comments} comments
             </a>{" "}
-            - {submission.posted_at} - {submission.score}
+            - {submission.posted_at} - {submission.score} -{" "}
+            {idx != null && (
+              <Link to={(loc) => ({ ...loc, state: { idx } })}>fullscreen</Link>
+            )}
           </div>
         </div>
         {submission.embed && (
@@ -237,6 +354,16 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               className="bg-dark header header-with-embed-placeholder"
               style={{ maxWidth: `${max_width}px` }}
             >
+              {full_screen && (
+                <button
+                  type="button"
+                  className="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              )}
               <a
                 className="header-link"
                 rel="noopener noreferrer"
