@@ -2,7 +2,9 @@
 version: "3.8"
 services:
   noscroll:
-    build: .
+    build:
+      context: .
+      network: host
     image: noscroll:latest
     container_name: noscroll
     network_mode: host
