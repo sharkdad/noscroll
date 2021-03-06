@@ -1,3 +1,7 @@
+body {
+  overflow-y: scroll;
+}
+
 div.grid-row {
   display: flex;
   justify-content: space-evenly;
@@ -10,10 +14,22 @@ img.preview {
   height: auto;
 }
 
+div.sub-container.show img.preview {
+  cursor: zoom-in;
+}
+
 .preview-caption {
   flex-grow: 1;
   width: 0;
   padding: 0.75rem;
+}
+
+div.sub-container {
+  cursor: none;
+}
+
+div.sub-container.show {
+  cursor: auto;
 }
 
 div.header {
@@ -32,24 +48,28 @@ div.header-details {
 }
 
 div.header-with-embed {
+  pointer-events: none;
   opacity: 0;
   position: absolute;
   z-index: 1;
   transition: opacity 0.25s, z-index 0s 0.25s;
 }
 
-div.header-with-embed:hover {
+div.sub-container.show div.header-with-embed {
+  pointer-events: all;
   opacity: 1;
   z-index: 3;
   transition: opacity 0.25s;
 }
 
 div.header-with-embed-placeholder {
+  pointer-events: none;
   position: absolute;
-  z-index: 0;
+  z-index: 2;
+  transition: z-index 0s 0.25s;
 }
 
-div.header-with-embed div.linkblocker {
+div.linkblocker {
   position: absolute;
   height: 2em;
   left: 0rem;
@@ -58,8 +78,13 @@ div.header-with-embed div.linkblocker {
   transition: z-index 0s 0.1s;
 }
 
-div.header-with-embed:hover div.linkblocker {
+div.sub-container.show div.linkblocker {
   z-index: -1;
+}
+
+div.embed-container {
+  position: relative;
+  z-index: 2;
 }
 
 div.embed {
@@ -78,6 +103,11 @@ div.embed > * {
 
 div#fs-modal {
   padding: 0 !important;
+}
+
+.modal-open div#fs-modal {
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 div#fs-modal div.modal-dialog {
@@ -105,5 +135,38 @@ div#fs-modal div.header {
 
 div#fs-modal div.linkblocker {
   left: 2rem;
+  right: 2rem;
+}
+
+div.modal-backdrop.show {
+  opacity: 0.9;
+}
+
+button.control {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3rem;
+  opacity: 0.7;
+  z-index: 10;
+  background-color: black;
+  line-height: 0;
+  padding: 0;
+}
+
+button.embed-type {
+  position: absolute;
+  font-size: 5rem;
+  left: 50%;
+  padding: 1rem;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+div#fs-modal button.prev {
+  position: fixed;
+  left: 2rem;
+}
+
+div#fs-modal button.next {
+  position: fixed;
   right: 2rem;
 }

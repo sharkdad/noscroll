@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Optional
 
@@ -31,10 +33,15 @@ class Locations:
 @dataclass
 class Embed:
     embed_type: str
-    url: Optional[str]
-    html: Optional[str]
-    width: Optional[int]
-    height: Optional[int]
+    url: Optional[str] = None
+    html: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    gallery: Optional[List[Embed]] = None
+
+
+# pylint: disable=no-member
+Embed.__pydantic_model__.update_forward_refs()  # type: ignore
 
 
 @dataclass

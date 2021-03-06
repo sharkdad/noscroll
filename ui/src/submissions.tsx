@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useContext, useRef } from "react"
+import React, { useState, useEffect, memo, useContext, useRef, MouseEvent } from "react"
 import { Link, useHistory, useLocation } from "react-router-dom"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
@@ -43,58 +43,89 @@ export function Fullscreen(props: FullscreenProps) {
   const location = useLocation()
   const history = useHistory()
 
+  const [zoom, set_zoom] = useState(false)
+  const [gallery_idx, set_gallery_idx] = useState(0)
+
+  function reset_state(): void {
+    set_zoom(false)
+    set_gallery_idx(0)
+  }
+
+  function toggle_zoom(): void {
+    set_zoom((z) => !z)
+  }
+
   const modal_up = useRef(false)
   const cached_item = useRef(null)
 
-  function get_item() {
-    if (location.state?.idx == null) {
-      return null
-    }
+  var item = null
+  var location_is_valid = true
+  if (location.state?.idx != null) {
     const idx: number = location.state.idx
     if (idx < 0 || idx >= items.length) {
-      return null
+      location_is_valid = false
+    } else {
+      item = items[idx]
     }
-    return items[idx]
   }
-
-  const item = get_item()
 
   useEffect(() => {
     $("#fs-modal").on("hide.bs.modal", function (e) {
       if (modal_up.current) {
         modal_up.current = false
         history.goBack()
+        reset_state()
       }
     })
   }, [history])
 
   useEffect(() => {
+    if (!location_is_valid) {
+      history.goBack()
+      reset_state()
+    }
+
     if (item == null && modal_up.current) {
       modal_up.current = false
+      reset_state()
       $("#fs-modal").modal("hide")
     } else if (item != null && !modal_up.current) {
       modal_up.current = true
       $("#fs-modal").modal("show")
     }
-  }, [item])
+  }, [item, location, history, location_is_valid])
 
   if (item != null) {
     cached_item.current = item
   }
 
+  const is_gallery = cached_item.current?.embed?.embed_type === "gallery"
+  var gallery_size = 0
+  if (is_gallery) {
+    gallery_size = cached_item.current.embed.gallery.length
+  }
+
+  function gallery_next(): void {
+    set_gallery_idx((curr_idx) => (curr_idx + 1) % gallery_size)
+  }
+
+  function gallery_prev(): void {
+    set_gallery_idx((curr_idx) => (curr_idx === 0 ? gallery_size - 1 : curr_idx - 1))
+  }
+
   var max_width = 0
   if (cached_item.current != null) {
-    const screen_width = window_state.inner_width
-    const screen_height = window_state.inner_height - 40
+    const screen_width = window_state.inner_width - 20
+    const screen_height = window_state.inner_height - 60
 
-    const ar =
-      cached_item.current.embed &&
-      cached_item.current.embed.width &&
-      cached_item.current.embed.height
-        ? cached_item.current.embed.width / cached_item.current.embed.height
-        : 2 / 3
+    const embed = is_gallery
+      ? cached_item.current.embed.gallery[gallery_idx]
+      : cached_item.current.embed
 
-    const max_height = Math.min(screen_width / ar, screen_height)
+    const ar = embed && embed.width && embed.height ? embed.width / embed.height : 2 / 3
+
+    const func = zoom ? Math.max : Math.min
+    const max_height = func(screen_width / ar, screen_height)
     max_width = max_height * ar
   }
 
@@ -106,7 +137,20 @@ export function Fullscreen(props: FullscreenProps) {
       aria-labelledby="fs-modalLabel"
       aria-hidden="true"
     >
-      <div className="modal-dialog" style={{ maxWidth: `${max_width}px` }}>
+      {is_gallery && (
+        <>
+          <button className="btn btn-link control prev" onClick={gallery_prev}>
+            <i className="bi bi-arrow-left-short"></i>
+          </button>
+          <button className="btn btn-link control next" onClick={gallery_next}>
+            <i className="bi bi-arrow-right-short"></i>
+          </button>
+        </>
+      )}
+      <div
+        className="modal-dialog modal-dialog-centered"
+        style={{ width: `${max_width}px`, maxWidth: "none", margin: "none" }}
+      >
         <div className="modal-content">
           <div className="modal-body">
             {item && (
@@ -114,6 +158,8 @@ export function Fullscreen(props: FullscreenProps) {
                 submission={item}
                 max_width={max_width}
                 full_screen={true}
+                toggle_zoom={toggle_zoom}
+                gallery_idx={is_gallery ? gallery_idx : null}
               />
             )}
           </div>
@@ -302,14 +348,71 @@ interface SubmissionDisplayProps {
   max_width?: number
   idx?: number
   full_screen?: boolean
+  toggle_zoom?: () => void
+  gallery_idx?: number
 }
 
 const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
-  const { submission, max_width, idx, full_screen } = props
+  const { submission, max_width, idx, full_screen, toggle_zoom, gallery_idx } = props
   const embed_type = submission.embed?.embed_type
+  const history = useHistory()
+
+  const [show_hover, set_show_hover] = useState(false)
+
+  const last_mouse_ts = useRef<number | null>(null)
+
+  function set_idle_timeout(initial_ts: number, delay: number = 2000): void {
+    setTimeout(() => {
+      if (last_mouse_ts.current == null) {
+        return
+      }
+
+      const ts_diff = last_mouse_ts.current - initial_ts
+
+      if (ts_diff < 100) {
+        last_mouse_ts.current = null
+        set_show_hover(false)
+      } else {
+        set_idle_timeout(
+          last_mouse_ts.current,
+          2000 - (performance.now() - last_mouse_ts.current)
+        )
+      }
+    }, delay)
+  }
+
+  function on_mouse_move(e: MouseEvent): void {
+    if (last_mouse_ts.current == null) {
+      set_show_hover(true)
+      set_idle_timeout(e.timeStamp)
+    }
+
+    last_mouse_ts.current = e.timeStamp
+  }
+
+  function on_mouse_out(e: MouseEvent): void {
+    last_mouse_ts.current = null
+    set_show_hover(false)
+  }
+
+  function on_click(): void {
+    if (full_screen) {
+      toggle_zoom()
+    } else {
+      history.push({ ...history.location, state: { idx } })
+    }
+  }
+
   return (
     <>
-      <div className="text-center w-100 mx-auto" style={{ maxWidth: `${max_width}px` }}>
+      <div
+        onMouseMove={on_mouse_move}
+        onMouseLeave={on_mouse_out}
+        className={`text-center w-100 mx-auto sub-container${
+          show_hover ? " show" : ""
+        }`}
+        style={{ maxWidth: `${max_width}px` }}
+      >
         <div
           className={`bg-dark header${submission.embed ? " header-with-embed" : ""}`}
           style={{ maxWidth: `${max_width}px` }}
@@ -368,23 +471,31 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
                 className="header-link"
                 rel="noopener noreferrer"
                 target="_blank"
-                href={submission.url}
+                href={"google.com"}
               >
                 {submission.title}
               </a>
             </div>
-            <div className="header invisible">
+            <div className="header invisible header-invisible-placeholder">
               <span className="header-link">placeholder</span>
             </div>
-            <div style={{ position: "relative", zIndex: 2 }}>
+            <div className="embed-container">
               {embed_type === "html" && (
                 <HtmlEmbed embed={submission.embed} title={submission.title} />
               )}
               {embed_type === "video" && (
                 <VideoEmbed embed={submission.embed} title={submission.title} />
               )}
-              {embed_type === "image" && (
-                <ImageEmbed embed={submission.embed} title={submission.title} />
+              {(embed_type === "image" || embed_type === "gallery") && (
+                <ImageEmbed
+                  embed={
+                    gallery_idx == null
+                      ? submission.embed
+                      : submission.embed.gallery[gallery_idx]
+                  }
+                  title={submission.title}
+                  on_click={on_click}
+                />
               )}
             </div>
           </>
@@ -405,6 +516,7 @@ interface Embed {
 interface EmbedProps {
   embed: Embed
   title: string
+  on_click?: () => void
 }
 
 const HtmlEmbed = memo((props: EmbedProps) => {
@@ -434,10 +546,25 @@ const VideoEmbed = memo((props: EmbedProps) => {
 })
 
 const ImageEmbed = memo((props: EmbedProps) => {
-  const { url } = props.embed
+  const { embed, on_click } = props
+  const { url } = embed
 
   return (
-    <img alt={props.title} src={url} referrerPolicy="no-referrer" className="preview" />
+    <>
+      {embed.embed_type === "gallery" && (
+        <button onClick={on_click} className="btn btn-link control embed-type">
+          <i className="bi bi-images"></i>
+        </button>
+      )}
+
+      <img
+        alt={props.title}
+        src={url}
+        referrerPolicy="no-referrer"
+        className="preview"
+        onClick={on_click}
+      />
+    </>
   )
 })
 

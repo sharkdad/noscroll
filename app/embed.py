@@ -1,3 +1,4 @@
+from dataclasses import replace
 from itertools import chain
 from typing import Iterable, Mapping, Optional
 
@@ -10,6 +11,7 @@ from .utils import first
 EMBED_TYPE_HTML = "html"
 EMBED_TYPE_VIDEO = "video"
 EMBED_TYPE_IMAGE = "image"
+EMBED_TYPE_GALLERY = "gallery"
 
 
 def get_embed(md: Mapping) -> Optional[Embed]:
@@ -18,7 +20,7 @@ def get_embed(md: Mapping) -> Optional[Embed]:
         embed_reddit_preview_video_variant,
         embed_reddit_video_preview_fallback,
         embed_reddit_media_embed,
-        embed_gallery_image,
+        embed_gallery,
         embed_preview_image,
     )
     parents = md.get("crosspost_parent_list") or []
@@ -71,15 +73,16 @@ def embed_reddit_media_embed(md: Mapping) -> Optional[Embed]:
     return first((media_embed(e) for e in embeds if e))
 
 
-def embed_gallery_image(md: Mapping) -> Optional[Embed]:
+def embed_gallery(md: Mapping) -> Optional[Embed]:
     media = md.get("media_metadata") or {}
     gallery = md.get("gallery_data") or {}
     items = gallery.get("items") or []
     media_ids = (item.get("media_id") for item in items if item)
     imgs = (media.get(media_id) for media_id in media_ids if media_id)
     srcs = (img.get("s") for img in imgs if img)
-    img = first(srcs)
-    return embed_image(img.get("u"), img.get("x"), img.get("y")) if img else None
+    es = [embed_image(i.get("u"), i.get("x"), i.get("y")) for i in srcs if i]
+    img = first(es)
+    return replace(img, embed_type=EMBED_TYPE_GALLERY, gallery=es) if img else None
 
 
 def embed_preview_image(md: Mapping) -> Optional[Embed]:
