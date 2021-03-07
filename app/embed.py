@@ -29,7 +29,7 @@ def get_embed(md: Mapping) -> Optional[Embed]:
 
 
 def embed_reddit_video_fallback(md: Mapping) -> Optional[Embed]:
-    build_embed = lambda rv: embed_video("fallback_url", rv)
+    build_embed = lambda rv: embed_video("fallback_url", rv, md)
     return first((build_embed(rv) for rv in get_reddit_videos(md) if rv))
 
 
@@ -38,7 +38,7 @@ def embed_reddit_preview_video_variant(md: Mapping) -> Optional[Embed]:
         variants = img.get("variants") or {}
         mp4 = variants.get("mp4") or {}
         src = mp4.get("source") or {}
-        return embed_video("url", src)
+        return embed_video("url", src, md)
 
     preview = md.get("preview") or {}
     images = preview.get("images") or []
@@ -48,7 +48,7 @@ def embed_reddit_preview_video_variant(md: Mapping) -> Optional[Embed]:
 def embed_reddit_video_preview_fallback(md: Mapping) -> Optional[Embed]:
     preview = md.get("preview") or {}
     rvp = preview.get("reddit_video_preview") or {}
-    return embed_video("fallback_url", rvp)
+    return embed_video("fallback_url", rvp, md)
 
 
 def embed_reddit_media_embed(md: Mapping) -> Optional[Embed]:
@@ -89,6 +89,10 @@ def embed_preview_image(md: Mapping) -> Optional[Embed]:
     if md.get("post_hint") == "link":
         return None
 
+    return force_embed_preview_image(md)
+
+
+def force_embed_preview_image(md: Mapping) -> Optional[Embed]:
     def build_embed(img: Mapping) -> Optional[Embed]:
         src = img.get("source") or {}
         url = src.get("url")
@@ -112,10 +116,12 @@ def embed_reddit_video_iframe(md: Mapping) -> Optional[str]:
     return first((format_html(html, p, md.get("id")) for p in paddings if p))
 
 
-def embed_video(url_field: str, md: Mapping) -> Optional[Embed]:
+def embed_video(url_field: str, md: Mapping, base_md: Mapping) -> Optional[Embed]:
     if not (url := md.get(url_field)):
         return None
-    return Embed(EMBED_TYPE_VIDEO, url, None, md.get("width"), md.get("height"))
+    preview_image = force_embed_preview_image(base_md) or Embed(EMBED_TYPE_IMAGE)
+    vid = Embed(EMBED_TYPE_VIDEO, url, None, md.get("width"), md.get("height"))
+    return replace(preview_image, embed_type=EMBED_TYPE_VIDEO, video=vid)
 
 
 def embed_image(url: str, width: Optional[int], height: Optional[int]) -> Embed:

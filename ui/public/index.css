@@ -146,7 +146,7 @@ button.control {
   top: 50%;
   transform: translateY(-50%);
   font-size: 3rem;
-  opacity: 0.7;
+  opacity: 0.6;
   z-index: 10;
   background-color: black;
   line-height: 0;
@@ -155,7 +155,6 @@ button.control {
 
 button.embed-type {
   position: absolute;
-  font-size: 5rem;
   left: 50%;
   padding: 1rem;
   transform: translateX(-50%) translateY(-50%);

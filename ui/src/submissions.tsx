@@ -118,9 +118,14 @@ export function Fullscreen(props: FullscreenProps) {
     const screen_width = window_state.inner_width - 20
     const screen_height = window_state.inner_height - 60
 
-    const embed = is_gallery
-      ? cached_item.current.embed.gallery[gallery_idx]
-      : cached_item.current.embed
+    var embed = null
+    if (is_gallery) {
+      embed = cached_item.current.embed.gallery[gallery_idx]
+    } else if (cached_item.current.embed?.embed_type === "video") {
+      embed = cached_item.current.embed.video
+    } else {
+      embed = cached_item.current.embed
+    }
 
     const ar = embed && embed.width && embed.height ? embed.width / embed.height : 2 / 3
 
@@ -483,8 +488,15 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               {embed_type === "html" && (
                 <HtmlEmbed embed={submission.embed} title={submission.title} />
               )}
-              {embed_type === "video" && (
-                <VideoEmbed embed={submission.embed} title={submission.title} />
+              {embed_type === "video" && full_screen && (
+                <VideoEmbed embed={submission.embed.video} title={submission.title} />
+              )}
+              {embed_type === "video" && !full_screen && (
+                <ImageEmbed
+                  embed={submission.embed}
+                  title={submission.title}
+                  on_click={on_click}
+                />
               )}
               {(embed_type === "image" || embed_type === "gallery") && (
                 <ImageEmbed
@@ -557,13 +569,23 @@ const ImageEmbed = memo((props: EmbedProps) => {
         </button>
       )}
 
-      <img
-        alt={props.title}
-        src={url}
-        referrerPolicy="no-referrer"
-        className="preview"
-        onClick={on_click}
-      />
+      {embed.embed_type === "video" && (
+        <button onClick={on_click} className="btn btn-link control embed-type">
+          <i className="bi bi-play-btn"></i>
+        </button>
+      )}
+
+      <div style={{ minHeight: "12rem" }}>
+        {url && (
+          <img
+            alt={props.title}
+            src={url}
+            referrerPolicy="no-referrer"
+            className="preview"
+            onClick={on_click}
+          />
+        )}
+      </div>
     </>
   )
 })
