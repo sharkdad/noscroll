@@ -267,7 +267,7 @@ function Layout(props: LayoutProps) {
   useEffect(() => {
     const timer = setInterval(() => {
       if (
-        window.innerHeight !== last_window_state.current.inner_height ||
+        window.innerHeight !== last_window_state.current.inner_height &&
         window.innerWidth !== last_window_state.current.inner_width
       ) {
         set_window_state({
@@ -318,7 +318,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
   const spacing_width = screen_width - total_width
   const spacing_per = spacing_width / items.length
   return (
-    <div className="grid-row mb-4" style={{ minHeight: `${height / 3}px` }}>
+    <div className="grid-row mb-4">
       {items.map((item, index) => (
         <div
           key={item.id}
