@@ -1,10 +1,10 @@
 export const SORT_METHODS: SortBy[] = [
-  { name: "curated", label: "Curated", has_time_filter: false },
   { name: "hot", label: "Hot", has_time_filter: false },
   { name: "top", label: "Top", has_time_filter: true },
   { name: "rising", label: "Rising", has_time_filter: false },
   { name: "new", label: "New", has_time_filter: false },
   { name: "controversial", label: "Controversial", has_time_filter: true },
+  { name: "curated", label: "Curated", has_time_filter: false },
 ]
 
 export const TIME_FILTERS: TimeFilter[] = [
@@ -39,6 +39,7 @@ export interface AppDetails {
 
 export interface AppGlobals {
   app_details: AppDetails
+  is_light_mode: boolean
 }
 
 export interface Location {

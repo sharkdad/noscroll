@@ -361,6 +361,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   const { submission, max_width, idx, full_screen, toggle_zoom, gallery_idx } = props
   const embed_type = submission.embed?.embed_type
   const history = useHistory()
+  const { is_light_mode } = useContext(AppContext)
 
   const [show_hover, set_show_hover] = useState(false)
 
@@ -408,6 +409,8 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
     }
   }
 
+  const bg_class = is_light_mode ? "bg-light" : "bg-dark"
+
   return (
     <>
       <div
@@ -419,10 +422,12 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         style={{ maxWidth: `${max_width}px` }}
       >
         <div
-          className={`bg-dark header${submission.embed ? " header-with-embed" : ""}`}
+          className={`${bg_class} header${
+            submission.embed ? " header-with-embed" : ""
+          }`}
           style={{ maxWidth: `${max_width}px` }}
         >
-          <div className="linkblocker" />
+          {submission.embed && <div className="linkblocker" />}
           {full_screen && (
             <button
               type="button"
@@ -444,6 +449,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
           <div className="header-details">
             {submission.subreddit} -{" "}
             <a
+              className=""
               rel="noopener noreferrer"
               target="_blank"
               href={`https://reddit.com${submission.permalink}`}
@@ -459,7 +465,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         {submission.embed && (
           <>
             <div
-              className="bg-dark header header-with-embed-placeholder"
+              className={`${bg_class} header header-with-embed-placeholder`}
               style={{ maxWidth: `${max_width}px` }}
             >
               {full_screen && (

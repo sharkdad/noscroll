@@ -106,7 +106,7 @@ def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submiss
 
         listing = getattr(get_feed(), sort)
         args = (time,) if time else ()
-        return list(listing(*args, limit=100, params=params))
+        return list(listing(*args, limit=20, params=params))
 
     return get_results
 

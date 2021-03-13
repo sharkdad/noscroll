@@ -6,6 +6,7 @@ import { enableTheme } from "./theme"
 import { App } from "./app"
 import { AppDetails } from "./data"
 import { get, wrapAsync } from "./utils"
+import "./index.css"
 
 function Index() {
   const [app_details, set_app_details] = useState<AppDetails | null>(null)

@@ -1,10 +1,11 @@
-import React, { memo } from "react"
+import React, { memo, useContext } from "react"
+import { AppContext } from "./app"
 
 export function enableTheme(): void {
   const dark: any = document.getElementById("dark-stylesheet")
   const light: any = document.getElementById("light-stylesheet")
 
-  const isLight = isLightModeEnabled()
+  const isLight = is_light_mode_enabled()
 
   if (isLight && light.disabled) {
     light.disabled = false
@@ -15,12 +16,20 @@ export function enableTheme(): void {
   }
 }
 
-export const ThemeSelector = memo(() => {
+export interface ThemeSelectorProps {
+  set_light_mode: (is_light_mode: boolean) => void
+}
+
+export const ThemeSelector = memo((props: ThemeSelectorProps) => {
+  const { is_light_mode } = useContext(AppContext)
+
   function toggleLightModeEnabled(): void {
-    if (isLightModeEnabled()) {
+    if (is_light_mode) {
       localStorage.removeItem(LIGHT_MODE_KEY)
+      props.set_light_mode(false)
     } else {
       localStorage.setItem(LIGHT_MODE_KEY, "true")
+      props.set_light_mode(true)
     }
     enableTheme()
   }
@@ -31,7 +40,7 @@ export const ThemeSelector = memo(() => {
         type="checkbox"
         className="custom-control-input"
         id={LIGHT_MODE_KEY}
-        defaultChecked={isLightModeEnabled()}
+        defaultChecked={is_light_mode_enabled()}
         onClick={toggleLightModeEnabled}
       />
       <label className="custom-control-label" htmlFor={LIGHT_MODE_KEY}>
@@ -43,6 +52,6 @@ export const ThemeSelector = memo(() => {
 
 const LIGHT_MODE_KEY = "light-mode-enabled"
 
-function isLightModeEnabled(): boolean {
+export function is_light_mode_enabled(): boolean {
   return localStorage.getItem(LIGHT_MODE_KEY) != null
 }

@@ -22,6 +22,7 @@ export interface UpdateLoadId {
 export interface NavbarProps {
   load_id: LoadId
   update: UpdateLoadId
+  set_light_mode: (is_light_mode: boolean) => void
 }
 
 function create_locations_loader(
@@ -46,10 +47,11 @@ function create_locations_loader(
 }
 
 export function Navbar(props: NavbarProps) {
-  const { update, load_id } = props
+  const { update, load_id, set_light_mode } = props
   const { reddit_user, page_path, sort_method, time_filter } = load_id
 
-  const { reddit_users, is_authenticated } = useContext(AppContext).app_details
+  const { app_details, is_light_mode } = useContext(AppContext)
+  const { reddit_users, is_authenticated } = app_details
 
   const [page_location, set_page_location] = useState<Location | null>(null)
   const [multis, set_multis] = useState<Location[] | null>(null)
@@ -57,7 +59,7 @@ export function Navbar(props: NavbarProps) {
 
   useEffect(
     create_locations_loader(
-      "/svc/api/me/multis",
+      "/svc/api/me/multis/",
       set_multis,
       is_authenticated,
       reddit_user
@@ -67,7 +69,7 @@ export function Navbar(props: NavbarProps) {
 
   useEffect(
     create_locations_loader(
-      "/svc/api/me/subreddits",
+      "/svc/api/me/subreddits/",
       set_subreddits,
       is_authenticated,
       reddit_user
@@ -85,7 +87,7 @@ export function Navbar(props: NavbarProps) {
           search_params.set("user", reddit_user)
         }
         const response: Location = await (
-          await get(`/svc/api/submissions/get_display_name?${search_params}`)
+          await get(`/svc/api/submissions/get_display_name/?${search_params}`)
         ).json()
         set_page_location(response)
       }
@@ -104,8 +106,10 @@ export function Navbar(props: NavbarProps) {
     </div>
   )
 
+  const navbar_class = is_light_mode ? "navbar-light bg-light" : "navbar-dark bg-dark"
+
   return (
-    <nav className="navbar fixed-top navbar-expand-lg navbar-dark bg-dark py-2">
+    <nav className={`navbar fixed-top navbar-expand-lg ${navbar_class} py-2`}>
       <div className="container">
         <a className="navbar-brand" href="/">
           noscroll
@@ -124,7 +128,7 @@ export function Navbar(props: NavbarProps) {
 
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav mr-auto">
-            <li className="nav-item active dropdown">
+            <li className="nav-item dropdown">
               <button
                 className="btn btn-link nav-link dropdown-toggle"
                 id="feedDropdown"
@@ -194,7 +198,7 @@ export function Navbar(props: NavbarProps) {
                 )}
               </div>
             </li>
-            <li className="nav-item active dropdown">
+            <li className="nav-item dropdown">
               <button
                 className="btn btn-link nav-link dropdown-toggle"
                 id="sortDropdown"
@@ -249,7 +253,7 @@ export function Navbar(props: NavbarProps) {
           </ul>
           <form className="form-inline">
             <div className="input-group py-2 py-lg-0 mr-sm-2">
-              <ThemeSelector />
+              <ThemeSelector set_light_mode={set_light_mode} />
             </div>
             <div className="input-group py-2 py-lg-0">
               {!is_authenticated && (

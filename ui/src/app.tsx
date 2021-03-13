@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useRef } from "react"
+import React, { createContext, useEffect, useState } from "react"
 import { Navbar, UpdateLoadId } from "./navbar"
 import { LinkLoader } from "./submissions"
 import { useParams, useLocation, useHistory } from "react-router-dom"
@@ -11,6 +11,7 @@ import {
   TimeFilter,
   TIME_FILTERS,
 } from "./data"
+import { is_light_mode_enabled } from "./theme"
 
 export const AppContext = createContext<AppGlobals>(null)
 
@@ -27,6 +28,16 @@ function get_app_path(page_path: string, sort_str: string): string {
 export function App(props: AppProps) {
   const { app_details } = props
   const { reddit_users, feeds } = app_details
+
+  const [app_globals, set_app_globals] = useState<AppGlobals>({
+    app_details,
+    is_light_mode: is_light_mode_enabled(),
+  })
+
+  function set_light_mode(is_light_mode: boolean): void {
+    set_app_globals((g) => ({ ...g, is_light_mode }))
+    $("#navbarSupportedContent").collapse("hide")
+  }
 
   const full_path: string = useParams().full_path ?? ""
   const path_parts = full_path.split("/")
@@ -63,28 +74,31 @@ export function App(props: AppProps) {
   const sort_method = SORT_METHODS_BY_NAME.get(sort_str) ?? SORT_METHODS[0]
   const time_filter = TIME_FILTERS.find((t) => t.name === time_str) ?? TIME_FILTERS[0]
 
-  const app_globals = useRef<AppGlobals>({ app_details })
   const update: UpdateLoadId = {
     set_page_path(new_page_path: string): void {
       const pathname = get_app_path(new_page_path, sort_str)
       history.push({ ...location, pathname })
+      $("#navbarSupportedContent").collapse("hide")
     },
 
     set_reddit_user(new_reddit_user: string): void {
       const new_search_params = new URLSearchParams(search)
       new_search_params.set("u", new_reddit_user)
       history.push({ ...location, search: `?${new_search_params}` })
+      $("#navbarSupportedContent").collapse("hide")
     },
 
     set_sort_method(new_sort_method: SortBy): void {
       const pathname = get_app_path(page_path, new_sort_method.name)
       history.push({ ...location, pathname })
+      $("#navbarSupportedContent").collapse("hide")
     },
 
     set_time_filter(new_time_filter: TimeFilter): void {
       const new_search_params = new URLSearchParams(search)
       new_search_params.set("t", new_time_filter.name)
       history.push({ ...location, search: `?${new_search_params}` })
+      $("#navbarSupportedContent").collapse("hide")
     },
   }
 
@@ -99,8 +113,8 @@ export function App(props: AppProps) {
   const load_key = JSON.stringify(load_id)
 
   return (
-    <AppContext.Provider value={app_globals.current}>
-      <Navbar load_id={load_id} update={update} />
+    <AppContext.Provider value={app_globals}>
+      <Navbar load_id={load_id} update={update} set_light_mode={set_light_mode} />
       <div className="container-fluid mt-5 pt-4">
         <LinkLoader key={load_key} load_id={load_id} />
       </div>
