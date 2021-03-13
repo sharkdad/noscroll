@@ -1,5 +1,6 @@
 from typing import Callable, Iterable, List
 
+from django.contrib.messages import get_messages
 from django.db.models import Subquery
 from django_filters.rest_framework import FilterSet, NumberFilter
 from praw import Reddit
@@ -44,7 +45,10 @@ class AppDetailsViewSet(ViewSet):
         else:
             feeds = []
             reddit_users = []
-        return Response(AppDetails(request.user.is_authenticated, reddit_users, feeds))
+        messages = [msg.message for msg in get_messages(request)]
+        return Response(
+            AppDetails(request.user.is_authenticated, reddit_users, feeds, messages)
+        )
 
 
 # pylint: disable=no-self-use
@@ -73,6 +77,7 @@ ALLOWED_TIME = set(("all", "year", "month", "day", "hour"))
 
 def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submission]]:
     page_path = request.query_params.get("page_path") or ""
+    limit = request.query_params.get("limit") or "20"
     after = request.query_params.get("after")
     sort = request.query_params.get("sort")
     time = request.query_params.get("t")
@@ -106,7 +111,7 @@ def get_submissions_listing(request: Request) -> Callable[[Reddit], List[Submiss
 
         listing = getattr(get_feed(), sort)
         args = (time,) if time else ()
-        return list(listing(*args, limit=20, params=params))
+        return list(listing(*args, limit=int(limit), params=params))
 
     return get_results
 

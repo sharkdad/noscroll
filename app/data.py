@@ -17,6 +17,7 @@ class AppDetails:
     is_authenticated: bool
     reddit_users: List[str]
     feeds: List[LocationFeed]
+    messages: List[str]
 
 
 @dataclass
@@ -49,7 +50,7 @@ Embed.__pydantic_model__.update_forward_refs()  # type: ignore
 class Submission:
     id: str
     title: str
-    posted_at: datetime
+    posted_at: str
     subreddit: str
     score: int
     url: str

@@ -4,6 +4,7 @@ import random
 from datetime import datetime, timezone
 from deepdiff import DeepDiff
 from django.conf import settings
+from django.contrib.humanize.templatetags.humanize import naturaltime
 from praw import Reddit
 import praw.models
 from statistics import mean
@@ -69,7 +70,7 @@ def get_submissions(subs: Iterable[praw.models.Submission]) -> Iterable[Submissi
         yield Submission(
             id=submission.id,
             title=submission.title,
-            posted_at=from_timestamp_utc(submission.created_utc),
+            posted_at=naturaltime(from_timestamp_utc(submission.created_utc)),
             subreddit=metadata["subreddit"],
             score=submission.score,
             url=submission.url,

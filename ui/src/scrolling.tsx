@@ -133,7 +133,10 @@ export class ScrollHandler {
       }
 
       if (this.after != null) {
+        searchParams.set("limit", "50")
         searchParams.set("after", this.after)
+      } else {
+        searchParams.set("limit", "20")
       }
 
       if (this.load_id.search) {

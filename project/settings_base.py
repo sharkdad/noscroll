@@ -8,7 +8,7 @@ REDDIT_TOP_SUBMISSIONS = 100
 REDDIT_SCORING_TOP_TIME = "month"
 REDDIT_SCORING_TOP_LIMIT = 10
 REDDIT_SCORING_REFRESH_DELAY = timedelta(days=1)
-REDDIT_SCOPES = ["identity", "mysubreddits", "read", "subscribe", "vote"]
+REDDIT_SCOPES = ["identity", "mysubreddits", "read"]
 
 WSGI_APPLICATION = "project.wsgi.application"
 ROOT_URLCONF = "project.urls"
@@ -22,6 +22,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
 
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_SESSION_REMEMBER = True
 LOGIN_REDIRECT_URL = LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_STORE_TOKENS = True

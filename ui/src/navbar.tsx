@@ -258,7 +258,7 @@ export function Navbar(props: NavbarProps) {
             <div className="input-group py-2 py-lg-0">
               {!is_authenticated && (
                 <a
-                  href={`${SVC_WEB_ROOT}/svc/accounts/login/`}
+                  href={`${SVC_WEB_ROOT}/svc/accounts/reddit/login/?process=login`}
                   className="btn btn-primary"
                 >
                   Login

@@ -447,7 +447,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
             {submission.title}
           </a>
           <div className="header-details">
-            {submission.subreddit} -{" "}
+            <Link to={`/r/${submission.subreddit}`}>{submission.subreddit}</Link> -{" "}
             <a
               className=""
               rel="noopener noreferrer"
@@ -456,9 +456,17 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
             >
               {submission.num_comments} comments
             </a>{" "}
-            - {submission.posted_at} - {submission.score} -{" "}
+            - {submission.posted_at}
             {idx != null && (
-              <Link to={(loc) => ({ ...loc, state: { idx } })}>fullscreen</Link>
+              <>
+                {" - "}
+                <Link to={(loc) => ({ ...loc, state: { idx } })}>
+                  <i
+                    className="bi bi-arrows-fullscreen"
+                    style={{ textAlign: "right" }}
+                  ></i>
+                </Link>
+              </>
             )}
           </div>
         </div>
