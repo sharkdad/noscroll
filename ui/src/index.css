@@ -9,7 +9,7 @@ body {
 
 div.grid-row {
   display: flex;
-  justify-content: space-evenly;
+  justify-content: center;
   align-items: center;
   width: 100%;
 }
@@ -50,6 +50,7 @@ a.header-link {
 div.header-details {
   margin-top: 0.5rem;
   font-size: smaller;
+  white-space: nowrap;
 }
 
 div.header-with-embed {

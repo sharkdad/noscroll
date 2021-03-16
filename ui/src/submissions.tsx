@@ -185,6 +185,47 @@ interface WindowState {
   inner_height: number
 }
 
+interface MediaRow {
+  row_items: any[]
+  ars: number[]
+  sum_ars: number
+  height: number
+  sum_widths: number
+  screen_width_minus_margins: number
+}
+
+function start_row(): MediaRow {
+  return {
+    row_items: [],
+    ars: [],
+    sum_ars: 0,
+    height: 0,
+    sum_widths: 0,
+    screen_width_minus_margins: 0,
+  }
+}
+
+function add_to_row(
+  screen_width: number,
+  screen_height: number,
+  row: MediaRow,
+  item: any
+): MediaRow {
+  const ar =
+    item.embed && item.embed.width && item.embed.height
+      ? item.embed.width / item.embed.height
+      : 2 / 3
+  const row_items = [...row.row_items, item]
+  const ars = [...row.ars, ar]
+  const sum_ars = row.sum_ars + ar
+  const num_margins = row_items.length - 1
+  const screen_width_minus_margins = screen_width - num_margins * 16
+  const width = (screen_width_minus_margins * ar) / sum_ars
+  const height = Math.min(width / ar, screen_height)
+  const sum_widths = ars.reduce((sum, ar) => sum + ar * height, 0)
+  return { row_items, ars, sum_ars, height, sum_widths, screen_width_minus_margins }
+}
+
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
   const { is_authenticated } = useContext(AppContext).app_details
@@ -198,63 +239,105 @@ function Layout(props: LayoutProps) {
 
   scroll.expand_item_refs(items.length)
   const rows = []
-  const screen_width = 0.9 * window_state.inner_width
-  const screen_height = 0.8 * window_state.inner_height
-  const min_height = 0.5 * screen_height
-  const max_width = 0.8 * screen_width
+  const screen_width = window_state.inner_width - 48
+  const screen_height = window_state.inner_height - 128
+  const min_height = 0.6 * screen_height
+  const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
+  const no_embed_per_row = Math.floor(screen_width / 240)
 
+  let ordered_items = []
   let items_offset = 0
-  let row_items = []
-  let ars = []
-  let sum_ars = 0
-  let height = 0
-  items.forEach((submission) => {
-    const ar =
-      submission.embed && submission.embed.width && submission.embed.height
-        ? submission.embed.width / submission.embed.height
-        : 2 / 3
-    const new_sum_ars = sum_ars + ar
-    const width = (screen_width * ar) / new_sum_ars
-    const new_height = Math.min(width / ar, screen_height)
-    const sum_widths = ars.reduce((sum, ar) => sum + ar * height, 0)
-    if (new_height < min_height || sum_widths > max_width) {
+  let no_embed_chunk_start_idx = 0
+  let no_embed_chunk = []
+  let row_start_idx = 0
+  let row = start_row()
+  let item_idx = 0
+
+  function push_items(row_items: any[]): void {
+    items_offset += row_items.length
+    ordered_items.push(...row_items)
+  }
+
+  function finish_no_embed_chunk(): void {
+    // need to know maximum that fit in row to get number of rows
+    // divide number of items by number of rows, ceiling to get chunk size
+    // build rows by hand with chunk size, set ar
+
+    const row_count = Math.ceil(no_embed_chunk.length / no_embed_per_row)
+    const items_per_row = Math.ceil(no_embed_chunk.length / row_count)
+    while (no_embed_chunk.length > 0) {
+      const row_items = no_embed_chunk.splice(0, items_per_row)
       rows.push(
         <SubmissionRow
           key={rows.length}
-          items={row_items}
-          ars={ars}
-          height={height}
+          no_embed_items={row_items}
           items_shown={items.length}
           items_loaded={items_loaded}
           items_offset={items_offset}
           scroll={scroll}
         />
       )
-      items_offset += row_items.length
-      row_items = [submission]
-      ars = [ar]
-      sum_ars = ar
-      height = Math.min(screen_width / ar, screen_height)
-    } else {
-      row_items.push(submission)
-      ars.push(ar)
-      sum_ars = new_sum_ars
-      height = new_height
+      push_items(row_items)
     }
-  })
-  if (row_items.length > 0) {
+  }
+
+  function finish_row(): void {
+    if (
+      no_embed_chunk.length > 0 &&
+      no_embed_chunk_start_idx < item_idx - no_embed_lookahead
+    ) {
+      finish_no_embed_chunk()
+    }
+
     rows.push(
       <SubmissionRow
         key={rows.length}
-        items={row_items}
-        ars={ars}
-        height={height}
+        row={row}
         items_shown={items.length}
         items_loaded={items_loaded}
         items_offset={items_offset}
         scroll={scroll}
       />
     )
+    push_items(row.row_items)
+    row = start_row()
+  }
+
+  var items_to_process = items.slice()
+  while (items_to_process.length > 0) {
+    const item = items_to_process.shift()
+
+    if (item.embed == null) {
+      if (no_embed_chunk.length === 0) {
+        no_embed_chunk_start_idx = item_idx
+      }
+      no_embed_chunk.push(item)
+    } else {
+      const new_row = add_to_row(screen_width, screen_height, row, item)
+      if (new_row.height < min_height) {
+        finish_row()
+        row = add_to_row(screen_width, screen_height, row, item)
+      } else {
+        row = new_row
+      }
+
+      if (row.row_items.length === 1) {
+        row_start_idx = item_idx
+      }
+
+      if (row.sum_widths > 0.95 * row.screen_width_minus_margins) {
+        finish_row()
+      }
+    }
+
+    item_idx++
+  }
+
+  if (row.row_items.length > 0) {
+    finish_row()
+  }
+  if (no_embed_chunk.length > 0) {
+    finish_no_embed_chunk()
   }
 
   useEffect(() => {
@@ -300,15 +383,14 @@ function Layout(props: LayoutProps) {
   return (
     <>
       {rows}
-      <Fullscreen items={items} window_state={window_state} />
+      <Fullscreen items={ordered_items} window_state={window_state} />
     </>
   )
 }
 
 interface SubmissionRowProps {
-  items: any[]
-  ars: number[]
-  height: number
+  row?: MediaRow
+  no_embed_items?: any[]
   items_shown: number
   items_loaded: number
   items_offset: number
@@ -316,15 +398,19 @@ interface SubmissionRowProps {
 }
 
 const SubmissionRow = memo((props: SubmissionRowProps) => {
-  const { items, ars, height, items_shown, items_loaded, items_offset, scroll } = props
-  const screen_width = window.innerWidth
-  const widths = ars.map((ar) => height * ar)
-  const total_width = widths.reduce((sum, width) => sum + width, 0)
-  const spacing_width = screen_width - total_width
-  const spacing_per = spacing_width / items.length
+  const { row, no_embed_items, items_shown, items_loaded, items_offset, scroll } = props
+  let row_items: any[] = []
+  let widths: number[] = []
+  if (row != null) {
+    row_items = row.row_items
+    widths = row.ars.map((ar) => row.height * ar)
+  } else {
+    row_items = no_embed_items
+  }
+
   return (
-    <div className="grid-row mb-4">
-      {items.map((item, index) => (
+    <div className="grid-row mb-3">
+      {row_items.map((item, index) => (
         <div
           key={item.id}
           data-reddit-id={item.id}
@@ -333,8 +419,9 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
             items_offset + index === Math.max(0, items_loaded - PAGE_SIZE * 2)
           }
           ref={scroll.get_item_ref(items_offset + index)}
+          className={index === row_items.length - 1 ? "" : "mr-3"}
           style={{
-            width: `${(100 * (widths[index] + spacing_per)) / screen_width}%`,
+            width: row != null ? `${widths[index]}px` : undefined,
           }}
         >
           <SubmissionDisplay
