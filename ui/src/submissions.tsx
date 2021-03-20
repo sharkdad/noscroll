@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useContext, useRef, MouseEvent } from "react"
+import React, { useState, useEffect, memo, useContext, useRef, UIEvent } from "react"
 import { Link, useHistory, useLocation } from "react-router-dom"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
@@ -472,8 +472,9 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   const [show_hover, set_show_hover] = useState(false)
 
   const last_mouse_ts = useRef<number | null>(null)
+  const is_touched = useRef(false)
 
-  function set_idle_timeout(initial_ts: number, delay: number = 2000): void {
+  function set_idle_timeout(initial_ts: number, delay: number = 5000): void {
     setTimeout(() => {
       if (last_mouse_ts.current == null) {
         return
@@ -487,13 +488,13 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
       } else {
         set_idle_timeout(
           last_mouse_ts.current,
-          2000 - (performance.now() - last_mouse_ts.current)
+          5000 - (performance.now() - last_mouse_ts.current)
         )
       }
     }, delay)
   }
 
-  function on_mouse_move(e: MouseEvent): void {
+  function do_show_hover(e: UIEvent): void {
     if (last_mouse_ts.current == null) {
       set_show_hover(true)
       set_idle_timeout(e.timeStamp)
@@ -502,12 +503,48 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
     last_mouse_ts.current = e.timeStamp
   }
 
-  function on_mouse_out(e: MouseEvent): void {
+  function on_mouse_move(e: UIEvent): void {
+    //console.log(`on_mouse_move ${e.currentTarget.tagName}`)
+
+    if (is_touched.current) {
+      //console.log(`on_mouse_move ${e.currentTarget.tagName} touched return`)
+      return
+    }
+
+    do_show_hover(e)
+  }
+
+  function on_mouse_out(e: UIEvent): void {
+    //console.log(`on_mouse_out ${e.currentTarget.tagName}`)
+
+    if (is_touched.current) {
+      //console.log(`on_mouse_out ${e.currentTarget.tagName} touched return`)
+      return
+    }
+
     last_mouse_ts.current = null
     set_show_hover(false)
   }
 
-  function on_click(): void {
+  function on_event(event: UIEvent): void {
+    event.stopPropagation()
+    //console.log(`on_event ${event.currentTarget.tagName}`)
+    if (event.type === "touchend") {
+      //console.log(`on_event ${event.currentTarget.tagName} touchend`)
+      is_touched.current = true
+      return
+    }
+
+    if (
+      is_touched.current &&
+      !show_hover &&
+      event.currentTarget.tagName.toUpperCase() !== "BUTTON"
+    ) {
+      //console.log(`on_event ${event.currentTarget.tagName} do_show_hover`)
+      do_show_hover(event)
+      return
+    }
+
     if (full_screen) {
       toggle_zoom()
     } else {
@@ -519,7 +556,6 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
 
   const shared_header = (
     <>
-      {submission.embed && <div className="linkblocker" />}
       {full_screen && (
         <button type="button" className="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -561,6 +597,8 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
       <div
         onMouseMove={on_mouse_move}
         onMouseLeave={on_mouse_out}
+        onTouchEnd={on_event}
+        onClick={on_event}
         className={`text-center w-100 mx-auto sub-container${
           show_hover ? " show" : ""
         }`}
@@ -597,7 +635,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
                 <ImageEmbed
                   embed={submission.embed}
                   title={submission.title}
-                  on_click={on_click}
+                  on_event={on_event}
                 />
               )}
               {(embed_type === "image" || embed_type === "gallery") && (
@@ -608,7 +646,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
                       : submission.embed.gallery[gallery_idx]
                   }
                   title={submission.title}
-                  on_click={on_click}
+                  on_event={on_event}
                 />
               )}
             </div>
@@ -630,7 +668,7 @@ interface Embed {
 interface EmbedProps {
   embed: Embed
   title: string
-  on_click?: () => void
+  on_event?: (event: UIEvent) => void
 }
 
 const HtmlEmbed = memo((props: EmbedProps) => {
@@ -660,19 +698,19 @@ const VideoEmbed = memo((props: EmbedProps) => {
 })
 
 const ImageEmbed = memo((props: EmbedProps) => {
-  const { embed, on_click } = props
+  const { embed, on_event } = props
   const { url } = embed
 
   return (
     <>
       {embed.embed_type === "gallery" && (
-        <button onClick={on_click} className="btn btn-link control embed-type">
+        <button onClick={on_event} className="btn btn-link control embed-type">
           <i className="bi bi-images"></i>
         </button>
       )}
 
       {embed.embed_type === "video" && (
-        <button onClick={on_click} className="btn btn-link control embed-type">
+        <button onClick={on_event} className="btn btn-link control embed-type">
           <i className="bi bi-play-btn"></i>
         </button>
       )}
@@ -684,7 +722,8 @@ const ImageEmbed = memo((props: EmbedProps) => {
             src={url}
             referrerPolicy="no-referrer"
             className="preview"
-            onClick={on_click}
+            onClick={on_event}
+            onTouchEnd={on_event}
           />
         )}
       </div>
