@@ -115,7 +115,7 @@ export function App(props: AppProps) {
   return (
     <AppContext.Provider value={app_globals}>
       <Navbar load_id={load_id} update={update} set_light_mode={set_light_mode} />
-      <div className="container-fluid mt-5 pt-4">
+      <div className="container-fluid mt-5 pt-4 px-0">
         <LinkLoader key={load_key} load_id={load_id} />
       </div>
     </AppContext.Provider>

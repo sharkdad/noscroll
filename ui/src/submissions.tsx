@@ -160,6 +160,7 @@ export function Fullscreen(props: FullscreenProps) {
           <div className="modal-body">
             {item && (
               <SubmissionDisplay
+                is_alt={false}
                 submission={item}
                 max_width={max_width}
                 full_screen={true}
@@ -240,10 +241,10 @@ function Layout(props: LayoutProps) {
   scroll.expand_item_refs(items.length)
   const rows = []
   const screen_width = window_state.inner_width - 48
-  const screen_height = window_state.inner_height - 128
+  const screen_height = window_state.inner_height - 192
   const min_height = 0.6 * screen_height
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
-  const no_embed_per_row = Math.floor(screen_width / 240)
+  const no_embed_per_row = Math.ceil(screen_width / 350)
 
   let ordered_items = []
   let items_offset = 0
@@ -270,6 +271,7 @@ function Layout(props: LayoutProps) {
       rows.push(
         <SubmissionRow
           key={rows.length}
+          is_alt={rows.length % 2 === 0}
           no_embed_items={row_items}
           items_shown={items.length}
           items_loaded={items_loaded}
@@ -292,6 +294,7 @@ function Layout(props: LayoutProps) {
     rows.push(
       <SubmissionRow
         key={rows.length}
+        is_alt={rows.length % 2 === 0}
         row={row}
         items_shown={items.length}
         items_loaded={items_loaded}
@@ -314,7 +317,7 @@ function Layout(props: LayoutProps) {
       no_embed_chunk.push(item)
     } else {
       const new_row = add_to_row(screen_width, screen_height, row, item)
-      if (new_row.height < min_height) {
+      if (row.row_items.length > 0 && new_row.height < min_height) {
         finish_row()
         row = add_to_row(screen_width, screen_height, row, item)
       } else {
@@ -328,6 +331,10 @@ function Layout(props: LayoutProps) {
       if (row.sum_widths > 0.95 * row.screen_width_minus_margins) {
         finish_row()
       }
+    }
+
+    if (row.row_items.length > 0 && row_start_idx < item_idx - no_embed_lookahead) {
+      finish_row()
     }
 
     item_idx++
@@ -391,6 +398,7 @@ function Layout(props: LayoutProps) {
 interface SubmissionRowProps {
   row?: MediaRow
   no_embed_items?: any[]
+  is_alt: boolean
   items_shown: number
   items_loaded: number
   items_offset: number
@@ -398,7 +406,16 @@ interface SubmissionRowProps {
 }
 
 const SubmissionRow = memo((props: SubmissionRowProps) => {
-  const { row, no_embed_items, items_shown, items_loaded, items_offset, scroll } = props
+  const {
+    row,
+    no_embed_items,
+    is_alt,
+    items_shown,
+    items_loaded,
+    items_offset,
+    scroll,
+  } = props
+
   let row_items: any[] = []
   let widths: number[] = []
   if (row != null) {
@@ -409,7 +426,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
   }
 
   return (
-    <div className="grid-row mb-3">
+    <div className={`grid-row py-3 px-3`}>
       {row_items.map((item, index) => (
         <div
           key={item.id}
@@ -425,8 +442,9 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
           }}
         >
           <SubmissionDisplay
+            is_alt={is_alt}
             submission={item}
-            max_width={widths[index]}
+            max_width={widths[index] || 700}
             idx={items_offset + index}
           />
         </div>
@@ -436,6 +454,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
 })
 
 interface SubmissionDisplayProps {
+  is_alt: boolean
   submission: any
   max_width?: number
   idx?: number
@@ -498,6 +517,45 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
 
   const bg_class = is_light_mode ? "bg-light" : "bg-dark"
 
+  const shared_header = (
+    <>
+      {submission.embed && <div className="linkblocker" />}
+      {full_screen && (
+        <button type="button" className="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      )}
+      <div className="header-details">
+        <Link to={`/r/${submission.subreddit}`}>{submission.subreddit}</Link> -{" "}
+        <a
+          className=""
+          rel="noopener noreferrer"
+          target="_blank"
+          href={`https://reddit.com${submission.permalink}`}
+        >
+          {submission.num_comments} comments
+        </a>{" "}
+        - {submission.posted_at}
+        {idx != null && (
+          <>
+            {" - "}
+            <Link to={(loc) => ({ ...loc, state: { idx } })}>
+              <i className="bi bi-arrows-fullscreen" style={{ textAlign: "right" }}></i>
+            </Link>
+          </>
+        )}
+      </div>
+      <a
+        className="header-link"
+        rel="noopener noreferrer"
+        target="_blank"
+        href={submission.url}
+      >
+        {submission.title}
+      </a>
+    </>
+  )
+
   return (
     <>
       <div
@@ -514,48 +572,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
           }`}
           style={{ maxWidth: `${max_width}px` }}
         >
-          {submission.embed && <div className="linkblocker" />}
-          {full_screen && (
-            <button
-              type="button"
-              className="close"
-              data-dismiss="modal"
-              aria-label="Close"
-            >
-              <span aria-hidden="true">&times;</span>
-            </button>
-          )}
-          <a
-            className="header-link"
-            rel="noopener noreferrer"
-            target="_blank"
-            href={submission.url}
-          >
-            {submission.title}
-          </a>
-          <div className="header-details">
-            <Link to={`/r/${submission.subreddit}`}>{submission.subreddit}</Link> -{" "}
-            <a
-              className=""
-              rel="noopener noreferrer"
-              target="_blank"
-              href={`https://reddit.com${submission.permalink}`}
-            >
-              {submission.num_comments} comments
-            </a>{" "}
-            - {submission.posted_at}
-            {idx != null && (
-              <>
-                {" - "}
-                <Link to={(loc) => ({ ...loc, state: { idx } })}>
-                  <i
-                    className="bi bi-arrows-fullscreen"
-                    style={{ textAlign: "right" }}
-                  ></i>
-                </Link>
-              </>
-            )}
-          </div>
+          {shared_header}
         </div>
         {submission.embed && (
           <>
@@ -563,26 +580,10 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               className={`${bg_class} header header-with-embed-placeholder`}
               style={{ maxWidth: `${max_width}px` }}
             >
-              {full_screen && (
-                <button
-                  type="button"
-                  className="close"
-                  data-dismiss="modal"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              )}
-              <a
-                className="header-link"
-                rel="noopener noreferrer"
-                target="_blank"
-                href={"google.com"}
-              >
-                {submission.title}
-              </a>
+              {shared_header}
             </div>
             <div className="header invisible header-invisible-placeholder">
+              <div className="header-details">placeholder</div>
               <span className="header-link">placeholder</span>
             </div>
             <div className="embed-container">
@@ -676,7 +677,7 @@ const ImageEmbed = memo((props: EmbedProps) => {
         </button>
       )}
 
-      <div style={{ minHeight: "12rem" }}>
+      <div>
         {url && (
           <img
             alt={props.title}
