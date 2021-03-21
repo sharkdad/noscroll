@@ -50,6 +50,8 @@ div.header {
 div.header-details {
   font-size: small;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 div.header-with-embed {

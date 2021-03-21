@@ -161,6 +161,7 @@ export function Fullscreen(props: FullscreenProps) {
             {item && (
               <SubmissionDisplay
                 is_alt={false}
+                is_only_item={false}
                 submission={item}
                 max_width={max_width}
                 full_screen={true}
@@ -232,7 +233,7 @@ function Layout(props: LayoutProps) {
   const { is_authenticated } = useContext(AppContext).app_details
 
   const [window_state, set_window_state] = useState<WindowState>({
-    inner_width: window.innerWidth,
+    inner_width: document.documentElement.clientWidth,
     inner_height: window.innerHeight,
   })
 
@@ -240,7 +241,7 @@ function Layout(props: LayoutProps) {
 
   scroll.expand_item_refs(items.length)
   const rows = []
-  const screen_width = window_state.inner_width - 48
+  const screen_width = window_state.inner_width - 32
   const screen_height = window_state.inner_height - 192
   const min_height = 0.6 * screen_height
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
@@ -363,11 +364,11 @@ function Layout(props: LayoutProps) {
     const timer = setInterval(() => {
       if (
         window.innerHeight !== last_window_state.current.inner_height &&
-        window.innerWidth !== last_window_state.current.inner_width
+        document.documentElement.clientWidth !== last_window_state.current.inner_width
       ) {
         set_window_state({
           inner_height: window.innerHeight,
-          inner_width: window.innerWidth,
+          inner_width: document.documentElement.clientWidth,
         })
       }
     }, 1000)
@@ -442,6 +443,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
           }}
         >
           <SubmissionDisplay
+            is_only_item={row_items.length === 1}
             is_alt={is_alt}
             submission={item}
             max_width={widths[index] || 700}
@@ -455,6 +457,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
 
 interface SubmissionDisplayProps {
   is_alt: boolean
+  is_only_item: boolean
   submission: any
   max_width?: number
   idx?: number
@@ -464,7 +467,15 @@ interface SubmissionDisplayProps {
 }
 
 const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
-  const { submission, max_width, idx, full_screen, toggle_zoom, gallery_idx } = props
+  const {
+    is_only_item,
+    submission,
+    max_width,
+    idx,
+    full_screen,
+    toggle_zoom,
+    gallery_idx,
+  } = props
   const embed_type = submission.embed?.embed_type
   const history = useHistory()
   const { is_light_mode } = useContext(AppContext)
@@ -562,7 +573,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         </button>
       )}
       <div className="header-details">
-        <Link to={`/r/${submission.subreddit}`}>{submission.subreddit}</Link> -{" "}
+        {submission.posted_at} -{" "}
         <a
           className=""
           rel="noopener noreferrer"
@@ -571,15 +582,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         >
           {submission.num_comments} comments
         </a>{" "}
-        - {submission.posted_at}
-        {idx != null && (
-          <>
-            {" - "}
-            <Link to={(loc) => ({ ...loc, state: { idx } })}>
-              <i className="bi bi-arrows-fullscreen" style={{ textAlign: "right" }}></i>
-            </Link>
-          </>
-        )}
+        - <Link to={`/r/${submission.subreddit}`}>{submission.subreddit}</Link>
       </div>
       <a
         className="header-link"
@@ -606,7 +609,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
       >
         <div
           className={`${bg_class} header${
-            submission.embed ? " header-with-embed" : ""
+            submission.embed && !is_only_item ? " header-with-embed" : ""
           }`}
           style={{ maxWidth: `${max_width}px` }}
         >
@@ -614,16 +617,21 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
         </div>
         {submission.embed && (
           <>
-            <div
-              className={`${bg_class} header header-with-embed-placeholder`}
-              style={{ maxWidth: `${max_width}px` }}
-            >
-              {shared_header}
-            </div>
-            <div className="header invisible header-invisible-placeholder">
-              <div className="header-details">placeholder</div>
-              <span className="header-link">placeholder</span>
-            </div>
+            {!is_only_item && (
+              <>
+                <div
+                  className={`${bg_class} header header-with-embed-placeholder`}
+                  style={{ maxWidth: `${max_width}px` }}
+                >
+                  {shared_header}
+                </div>
+                <div className="header invisible header-invisible-placeholder">
+                  <div className="header-details">placeholder</div>
+                  <span className="header-link">placeholder</span>
+                </div>
+              </>
+            )}
+
             <div className="embed-container">
               {embed_type === "html" && (
                 <HtmlEmbed embed={submission.embed} title={submission.title} />
