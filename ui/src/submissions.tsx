@@ -33,6 +33,11 @@ export function LinkLoader(props: LinkLoaderProps) {
   )
 }
 
+interface FullscreenInteractions {
+  gallery_next: () => void
+  gallery_prev: () => void
+}
+
 interface FullscreenProps {
   items: any[]
   window_state: WindowState
@@ -105,18 +110,22 @@ export function Fullscreen(props: FullscreenProps) {
     gallery_size = cached_item.current.embed.gallery.length
   }
 
-  function gallery_next(): void {
-    set_gallery_idx((curr_idx) => (curr_idx + 1) % gallery_size)
-  }
+  const interactions: FullscreenInteractions = {
+    gallery_next(): void {
+      set_gallery_idx((curr_idx) => (curr_idx + 1) % gallery_size)
+      set_zoom(false)
+    },
 
-  function gallery_prev(): void {
-    set_gallery_idx((curr_idx) => (curr_idx === 0 ? gallery_size - 1 : curr_idx - 1))
+    gallery_prev(): void {
+      set_gallery_idx((curr_idx) => (curr_idx === 0 ? gallery_size - 1 : curr_idx - 1))
+      set_zoom(false)
+    },
   }
 
   var max_width = 0
   if (cached_item.current != null) {
     const screen_width = window_state.inner_width - 20
-    const screen_height = window_state.inner_height - 60
+    const screen_height = window_state.inner_height
 
     var embed = null
     if (is_gallery) {
@@ -131,7 +140,7 @@ export function Fullscreen(props: FullscreenProps) {
 
     const func = zoom ? Math.max : Math.min
     const max_height = func(screen_width / ar, screen_height)
-    max_width = max_height * ar
+    max_width = Math.floor(max_height * ar)
   }
 
   return (
@@ -142,16 +151,6 @@ export function Fullscreen(props: FullscreenProps) {
       aria-labelledby="fs-modalLabel"
       aria-hidden="true"
     >
-      {is_gallery && (
-        <>
-          <button className="btn btn-link control prev" onClick={gallery_prev}>
-            <i className="bi bi-arrow-left-short"></i>
-          </button>
-          <button className="btn btn-link control next" onClick={gallery_next}>
-            <i className="bi bi-arrow-right-short"></i>
-          </button>
-        </>
-      )}
       <div
         className="modal-dialog modal-dialog-centered"
         style={{ width: `${max_width}px`, maxWidth: "none", margin: "none" }}
@@ -164,7 +163,7 @@ export function Fullscreen(props: FullscreenProps) {
                 is_only_item={false}
                 submission={item}
                 max_width={max_width}
-                full_screen={true}
+                full_screen={interactions}
                 toggle_zoom={toggle_zoom}
                 gallery_idx={is_gallery ? gallery_idx : null}
               />
@@ -455,13 +454,19 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
   )
 })
 
+interface SubmissionInteractions {
+  on_touch_end: (event: UIEvent) => void
+  on_click: (event: UIEvent) => void
+  on_click_zoom: (event: UIEvent) => void
+}
+
 interface SubmissionDisplayProps {
   is_alt: boolean
   is_only_item: boolean
   submission: any
   max_width?: number
   idx?: number
-  full_screen?: boolean
+  full_screen?: FullscreenInteractions
   toggle_zoom?: () => void
   gallery_idx?: number
 }
@@ -514,11 +519,13 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
     last_mouse_ts.current = e.timeStamp
   }
 
-  function on_mouse_move(e: UIEvent): void {
-    //console.log(`on_mouse_move ${e.currentTarget.tagName}`)
+  function stop_hover(e: UIEvent): void {
+    last_mouse_ts.current = null
+    set_show_hover(false)
+  }
 
+  function on_mouse_move(e: UIEvent): void {
     if (is_touched.current) {
-      //console.log(`on_mouse_move ${e.currentTarget.tagName} touched return`)
       return
     }
 
@@ -526,41 +533,39 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   }
 
   function on_mouse_out(e: UIEvent): void {
-    //console.log(`on_mouse_out ${e.currentTarget.tagName}`)
-
     if (is_touched.current) {
-      //console.log(`on_mouse_out ${e.currentTarget.tagName} touched return`)
       return
     }
 
-    last_mouse_ts.current = null
-    set_show_hover(false)
+    stop_hover(e)
   }
 
-  function on_event(event: UIEvent): void {
-    event.stopPropagation()
-    //console.log(`on_event ${event.currentTarget.tagName}`)
-    if (event.type === "touchend") {
-      //console.log(`on_event ${event.currentTarget.tagName} touchend`)
+  const interactions: SubmissionInteractions = {
+    on_touch_end(event: UIEvent): void {
       is_touched.current = true
-      return
-    }
+    },
 
-    if (
-      is_touched.current &&
-      !show_hover &&
-      event.currentTarget.tagName.toUpperCase() !== "BUTTON"
-    ) {
-      //console.log(`on_event ${event.currentTarget.tagName} do_show_hover`)
-      do_show_hover(event)
-      return
-    }
+    on_click(event: UIEvent): void {
+      const tagName =
+        event.target instanceof Element ? event.target.tagName.toLowerCase() : ""
+      if (tagName !== "div" && tagName !== "img") {
+        return
+      }
 
-    if (full_screen) {
-      toggle_zoom()
-    } else {
-      history.push({ ...history.location, state: { idx } })
-    }
+      if (show_hover) {
+        stop_hover(event)
+      } else {
+        do_show_hover(event)
+      }
+    },
+
+    on_click_zoom(event: UIEvent): void {
+      if (full_screen) {
+        toggle_zoom()
+      } else {
+        history.push({ ...history.location, state: { idx } })
+      }
+    },
   }
 
   const bg_class = is_light_mode ? "bg-light" : "bg-dark"
@@ -600,24 +605,26 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
       <div
         onMouseMove={on_mouse_move}
         onMouseLeave={on_mouse_out}
-        onTouchEnd={on_event}
-        onClick={on_event}
+        onTouchEnd={interactions.on_touch_end}
+        onClick={interactions.on_click}
         className={`text-center w-100 mx-auto sub-container${
           show_hover ? " show" : ""
         }`}
         style={{ maxWidth: `${max_width}px` }}
       >
-        <div
-          className={`${bg_class} header${
-            submission.embed && !is_only_item ? " header-with-embed" : ""
-          }`}
-          style={{ maxWidth: `${max_width}px` }}
-        >
-          {shared_header}
-        </div>
+        {!full_screen && (
+          <div
+            className={`${bg_class} header${
+              submission.embed && !is_only_item ? " header-with-embed" : ""
+            }`}
+            style={{ maxWidth: `${max_width}px` }}
+          >
+            {shared_header}
+          </div>
+        )}
         {submission.embed && (
           <>
-            {!is_only_item && (
+            {!is_only_item && !full_screen && (
               <>
                 <div
                   className={`${bg_class} header header-with-embed-placeholder`}
@@ -634,16 +641,25 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
 
             <div className="embed-container">
               {embed_type === "html" && (
-                <HtmlEmbed embed={submission.embed} title={submission.title} />
+                <HtmlEmbed
+                  embed={submission.embed}
+                  title={submission.title}
+                  full_screen={full_screen}
+                />
               )}
               {embed_type === "video" && full_screen && (
-                <VideoEmbed embed={submission.embed.video} title={submission.title} />
+                <VideoEmbed
+                  embed={submission.embed.video}
+                  title={submission.title}
+                  full_screen={full_screen}
+                />
               )}
               {embed_type === "video" && !full_screen && (
                 <ImageEmbed
                   embed={submission.embed}
                   title={submission.title}
-                  on_event={on_event}
+                  interactions={interactions}
+                  full_screen={full_screen}
                 />
               )}
               {(embed_type === "image" || embed_type === "gallery") && (
@@ -654,7 +670,8 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
                       : submission.embed.gallery[gallery_idx]
                   }
                   title={submission.title}
-                  on_event={on_event}
+                  interactions={interactions}
+                  full_screen={full_screen}
                 />
               )}
             </div>
@@ -671,12 +688,14 @@ interface Embed {
   html?: string
   width?: number
   height?: number
+  video?: Embed
 }
 
 interface EmbedProps {
   embed: Embed
   title: string
-  on_event?: (event: UIEvent) => void
+  interactions?: SubmissionInteractions
+  full_screen?: FullscreenInteractions
 }
 
 const HtmlEmbed = memo((props: EmbedProps) => {
@@ -698,7 +717,13 @@ const VideoEmbed = memo((props: EmbedProps) => {
 
   return (
     <div>
-      <video controls style={{ width: "100%", height: "auto" }}>
+      <video
+        controls
+        playsInline
+        muted
+        autoPlay
+        style={{ width: "100%", height: "auto" }}
+      >
         <source src={url} type="video/mp4" />
       </video>
     </div>
@@ -706,32 +731,82 @@ const VideoEmbed = memo((props: EmbedProps) => {
 })
 
 const ImageEmbed = memo((props: EmbedProps) => {
-  const { embed, on_event } = props
+  const { embed, interactions, full_screen } = props
   const { url } = embed
+
+  const [show_video, set_show_video] = useState(false)
 
   return (
     <>
-      {embed.embed_type === "gallery" && (
-        <button onClick={on_event} className="btn btn-link control embed-type">
-          <i className="bi bi-images"></i>
-        </button>
-      )}
+      <div
+        className={`px-1 controls${
+          embed.embed_type === "image" || full_screen ? "" : " always-show"
+        }`}
+      >
+        {embed.embed_type === "image" && (
+          <>
+            <button onClick={interactions.on_click_zoom} className="btn btn-link mx-1">
+              <i className="bi bi-zoom-in"></i>
+            </button>
+            {full_screen && (
+              <button
+                className="btn btn-link mx-1"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <i className="bi bi-x"></i>
+              </button>
+            )}
+          </>
+        )}
+        {!full_screen && embed.embed_type === "gallery" && (
+          <button onClick={interactions.on_click_zoom} className="btn btn-link mx-1">
+            <i className="bi bi-images"></i>
+          </button>
+        )}
 
-      {embed.embed_type === "video" && (
-        <button onClick={on_event} className="btn btn-link control embed-type">
-          <i className="bi bi-play-btn"></i>
-        </button>
-      )}
+        {full_screen && embed.embed_type === "gallery" && (
+          <>
+            <button onClick={full_screen.gallery_prev} className="btn btn-link mx-1">
+              <i className="bi bi-arrow-left"></i>
+            </button>
+            <button onClick={interactions.on_click_zoom} className="btn btn-link mx-1">
+              <i className="bi bi-zoom-in"></i>
+            </button>
+            <button
+              className="btn btn-link mx-1"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <i className="bi bi-x"></i>
+            </button>
+            <button onClick={full_screen.gallery_next} className="btn btn-link mx-1">
+              <i className="bi bi-arrow-right"></i>
+            </button>
+          </>
+        )}
+
+        {!show_video && embed.embed_type === "video" && (
+          <button onClick={() => set_show_video(true)} className="btn btn-link mx-1">
+            <i className="bi bi-play-btn"></i>
+          </button>
+        )}
+      </div>
 
       <div>
-        {url && (
+        {show_video && (
+          <VideoEmbed
+            embed={embed.video}
+            title={props.title}
+            full_screen={full_screen}
+          />
+        )}
+        {!show_video && url && (
           <img
             alt={props.title}
             src={url}
             referrerPolicy="no-referrer"
             className="preview"
-            onClick={on_event}
-            onTouchEnd={on_event}
           />
         )}
       </div>

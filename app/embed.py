@@ -80,9 +80,13 @@ def embed_gallery(md: Mapping) -> Optional[Embed]:
     media_ids = (item.get("media_id") for item in items if item)
     imgs = (media.get(media_id) for media_id in media_ids if media_id)
     srcs = (img.get("s") for img in imgs if img)
-    es = [embed_image(i.get("u"), i.get("x"), i.get("y")) for i in srcs if i]
+    es = [
+        embed_image(i.get("u"), i.get("x"), i.get("y"), EMBED_TYPE_GALLERY)
+        for i in srcs
+        if i
+    ]
     img = first(es)
-    return replace(img, embed_type=EMBED_TYPE_GALLERY, gallery=es) if img else None
+    return replace(img, gallery=es) if img else None
 
 
 def embed_preview_image(md: Mapping) -> Optional[Embed]:
@@ -124,8 +128,13 @@ def embed_video(url_field: str, md: Mapping, base_md: Mapping) -> Optional[Embed
     return replace(preview_image, embed_type=EMBED_TYPE_VIDEO, video=vid)
 
 
-def embed_image(url: str, width: Optional[int], height: Optional[int]) -> Embed:
-    return Embed(EMBED_TYPE_IMAGE, url, None, width, height)
+def embed_image(
+    url: str,
+    width: Optional[int],
+    height: Optional[int],
+    embed_type: str = EMBED_TYPE_IMAGE,
+) -> Embed:
+    return Embed(embed_type, url, None, width, height)
 
 
 def get_iframe_padding(md: Mapping) -> Optional[str]:

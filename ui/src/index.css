@@ -19,18 +19,10 @@ img.preview {
   height: auto;
 }
 
-div.sub-container.show img.preview {
-  cursor: zoom-in;
-}
-
 .preview-caption {
   flex-grow: 1;
   width: 0;
   padding: 0.75rem;
-}
-
-div.sub-container {
-  cursor: none;
 }
 
 div.sub-container.show {
@@ -145,22 +137,34 @@ div#fs-modal div.linkblocker {
   right: 2rem;
 }
 
-button.control {
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 3rem;
-  opacity: 0.6;
-  z-index: 10;
-  background-color: black;
-  line-height: 0;
-  padding: 0;
+div.controls {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  z-index: -1;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.25s, z-index 0s 0.25s;
 }
 
-button.embed-type {
-  position: absolute;
-  left: 50%;
-  padding: 1rem;
-  transform: translateX(-50%) translateY(-50%);
+div.sub-container.show div.controls {
+  z-index: 10;
+  opacity: 0.6;
+  transition: opacity 0.25s;
+}
+
+div.controls.always-show {
+  opacity: 0.4;
+  z-index: 10;
+}
+
+div#fs-modal div.controls {
+  position: fixed;
+}
+
+div.controls button {
+  font-size: 2rem;
+  background-color: black;
 }
 
 div#fs-modal button.prev {
