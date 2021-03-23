@@ -25,10 +25,6 @@ img.preview {
   padding: 0.75rem;
 }
 
-div.sub-container.show {
-  cursor: auto;
-}
-
 div.header {
   padding: 0.5rem;
   width: 100%;
@@ -66,6 +62,8 @@ div.header-with-embed-placeholder {
   position: absolute;
   z-index: 2;
   transition: z-index 0s 0.25s;
+  max-height: 60px;
+  overflow: hidden;
 }
 
 div.linkblocker {
@@ -83,7 +81,6 @@ div.sub-container.show div.linkblocker {
 
 div.embed-container {
   position: relative;
-  z-index: 2;
 }
 
 div.embed {
@@ -125,7 +122,7 @@ div#fs-modal div.modal-body {
 div#fs-modal button.close {
   position: absolute;
   right: 0.75rem;
-  z-index: 10000;
+  z-index: 4;
 }
 
 div#fs-modal div.header {
@@ -148,14 +145,14 @@ div.controls {
 }
 
 div.sub-container.show div.controls {
-  z-index: 10;
+  z-index: 4;
   opacity: 0.6;
   transition: opacity 0.25s;
 }
 
 div.controls.always-show {
   opacity: 0.4;
-  z-index: 10;
+  z-index: 4;
 }
 
 div#fs-modal div.controls {

@@ -152,7 +152,9 @@ export class ScrollHandler {
     const last = response.results[response.results.length - 1]
     this.after = last?.id
     this.next = response.next
-    this.is_more_results = this.after != null || this.next != null
+    this.is_more_results =
+      (this.after != null && !this.load_id.search.includes("reddit_ids=")) ||
+      this.next != null
     this.set_loading_state((last_state) => ({
       results: [...last_state.results, ...response.results],
       is_loading: false,

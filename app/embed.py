@@ -15,6 +15,9 @@ EMBED_TYPE_GALLERY = "gallery"
 
 
 def get_embed(md: Mapping) -> Optional[Embed]:
+    if md.get("is_self") is True:
+        return None
+
     embed_funcs = (
         embed_reddit_video_fallback,
         embed_reddit_preview_video_variant,
@@ -23,9 +26,10 @@ def get_embed(md: Mapping) -> Optional[Embed]:
         embed_gallery,
         embed_preview_image,
     )
+    embeds = (f(md) for f in embed_funcs)
     parents = md.get("crosspost_parent_list") or []
-    embeds = ((f(m) for m in (md, *parents)) for f in embed_funcs)
-    return first(chain.from_iterable(embeds))
+    parent_embeds = (get_embed(p) for p in parents)
+    return first(chain(embeds, parent_embeds))
 
 
 def embed_reddit_video_fallback(md: Mapping) -> Optional[Embed]:
@@ -52,6 +56,10 @@ def embed_reddit_video_preview_fallback(md: Mapping) -> Optional[Embed]:
 
 
 def embed_reddit_media_embed(md: Mapping) -> Optional[Embed]:
+    media = md.get("media") or {}
+    if media.get("type") == "twitter.com":
+        return None
+
     html = """
         <div class="embed" style="padding-top: {}">
             {}

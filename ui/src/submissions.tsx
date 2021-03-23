@@ -241,8 +241,8 @@ function Layout(props: LayoutProps) {
   scroll.expand_item_refs(items.length)
   const rows = []
   const screen_width = window_state.inner_width - 32
-  const screen_height = window_state.inner_height - 192
-  const min_height = 0.6 * screen_height
+  const screen_height = window_state.inner_height - 128
+  const min_height = Math.min(400, screen_height)
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
   const no_embed_per_row = Math.ceil(screen_width / 350)
 
