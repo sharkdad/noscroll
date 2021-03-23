@@ -244,7 +244,7 @@ function Layout(props: LayoutProps) {
   const screen_height = window_state.inner_height - 128
   const min_height = Math.min(400, screen_height)
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
-  const no_embed_per_row = Math.ceil(screen_width / 350)
+  const no_embed_per_row = Math.max(1, Math.floor(screen_width / 350))
 
   let ordered_items = []
   let items_offset = 0
