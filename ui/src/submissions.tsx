@@ -244,7 +244,6 @@ function Layout(props: LayoutProps) {
   const screen_height = window_state.inner_height - 128
   const min_height = Math.min(400, screen_height)
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
-  const no_embed_per_row = Math.max(1, Math.floor(screen_width / 350))
 
   let ordered_items = []
   let items_offset = 0
@@ -260,27 +259,20 @@ function Layout(props: LayoutProps) {
   }
 
   function finish_no_embed_chunk(): void {
-    // need to know maximum that fit in row to get number of rows
-    // divide number of items by number of rows, ceiling to get chunk size
-    // build rows by hand with chunk size, set ar
-
-    const row_count = Math.ceil(no_embed_chunk.length / no_embed_per_row)
-    const items_per_row = Math.ceil(no_embed_chunk.length / row_count)
-    while (no_embed_chunk.length > 0) {
-      const row_items = no_embed_chunk.splice(0, items_per_row)
-      rows.push(
+    rows.push(
+      <div key={rows.length} className="container px-0">
         <SubmissionRow
-          key={rows.length}
           is_alt={rows.length % 2 === 0}
-          no_embed_items={row_items}
+          no_embed_items={[...no_embed_chunk]}
           items_shown={items.length}
           items_loaded={items_loaded}
           items_offset={items_offset}
           scroll={scroll}
         />
-      )
-      push_items(row_items)
-    }
+      </div>
+    )
+    push_items(no_embed_chunk)
+    no_embed_chunk = []
   }
 
   function finish_row(): void {
@@ -426,7 +418,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
   }
 
   return (
-    <div className={`grid-row py-3 px-3`}>
+    <div className={`grid-row px-2`}>
       {row_items.map((item, index) => (
         <div
           key={item.id}
@@ -436,7 +428,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
             items_offset + index === Math.max(0, items_loaded - PAGE_SIZE * 2)
           }
           ref={scroll.get_item_ref(items_offset + index)}
-          className={index === row_items.length - 1 ? "" : "mr-3"}
+          className="mx-2 my-2"
           style={{
             width: row != null ? `${widths[index]}px` : undefined,
           }}
@@ -445,7 +437,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
             is_only_item={row_items.length === 1}
             is_alt={is_alt}
             submission={item}
-            max_width={widths[index] || 700}
+            max_width={widths[index]}
             idx={items_offset + index}
           />
         </div>

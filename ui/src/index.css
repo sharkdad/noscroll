@@ -14,6 +14,10 @@ div.grid-row {
   width: 100%;
 }
 
+div.container div.grid-row {
+  flex-wrap: wrap;
+}
+
 img.preview {
   width: 100%;
   height: auto;
