@@ -123,6 +123,7 @@ export function Fullscreen(props: FullscreenProps) {
   }
 
   var max_width = 0
+  var max_height = 0
   if (cached_item.current != null) {
     const screen_width = window_state.inner_width - 20
     const screen_height = window_state.inner_height
@@ -139,7 +140,7 @@ export function Fullscreen(props: FullscreenProps) {
     const ar = embed && embed.width && embed.height ? embed.width / embed.height : 2 / 3
 
     const func = zoom ? Math.max : Math.min
-    const max_height = func(screen_width / ar, screen_height)
+    max_height = func(screen_width / ar, screen_height)
     max_width = Math.floor(max_height * ar)
   }
 
@@ -162,6 +163,7 @@ export function Fullscreen(props: FullscreenProps) {
                 is_alt={false}
                 is_only_item={false}
                 submission={item}
+                height={max_height}
                 max_width={max_width}
                 full_screen={interactions}
                 toggle_zoom={toggle_zoom}
@@ -206,27 +208,6 @@ function start_row(): MediaRow {
   }
 }
 
-function add_to_row(
-  screen_width: number,
-  screen_height: number,
-  row: MediaRow,
-  item: any
-): MediaRow {
-  const ar =
-    item.embed && item.embed.width && item.embed.height
-      ? item.embed.width / item.embed.height
-      : 2 / 3
-  const row_items = [...row.row_items, item]
-  const ars = [...row.ars, ar]
-  const sum_ars = row.sum_ars + ar
-  const num_margins = row_items.length - 1
-  const screen_width_minus_margins = screen_width - num_margins * 16
-  const width = (screen_width_minus_margins * ar) / sum_ars
-  const height = Math.min(width / ar, screen_height)
-  const sum_widths = ars.reduce((sum, ar) => sum + ar * height, 0)
-  return { row_items, ars, sum_ars, height, sum_widths, screen_width_minus_margins }
-}
-
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
   const { is_authenticated } = useContext(AppContext).app_details
@@ -243,6 +224,8 @@ function Layout(props: LayoutProps) {
   const screen_width = window_state.inner_width - 32
   const screen_height = window_state.inner_height - 128
   const min_height = Math.min(400, screen_height)
+  const min_width = Math.min(300, screen_width)
+  const max_expanded_width = Math.min(min_width * 1.5, screen_width)
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
 
   let ordered_items = []
@@ -250,7 +233,7 @@ function Layout(props: LayoutProps) {
   let no_embed_chunk_start_idx = 0
   let no_embed_chunk = []
   let row_start_idx = 0
-  let row = start_row()
+  let curr_row = start_row()
   let item_idx = 0
 
   function push_items(row_items: any[]): void {
@@ -275,6 +258,39 @@ function Layout(props: LayoutProps) {
     no_embed_chunk = []
   }
 
+  function add_to_row(item: any): MediaRow | null {
+    const ar =
+      item.embed && item.embed.width && item.embed.height
+        ? item.embed.width / item.embed.height
+        : 2 / 3
+    const row_items = [...curr_row.row_items, item]
+    const ars = [...curr_row.ars, ar]
+    let sum_ars = curr_row.sum_ars + ar
+    const num_margins = row_items.length - 1
+    const screen_width_minus_margins = screen_width - num_margins * 16
+    const width = (screen_width_minus_margins * ar) / sum_ars
+    const height = Math.min(width / ar, screen_height)
+    let sum_widths = ars.reduce((sum, ar) => sum + ar * height, 0)
+
+    for (let index = 0; index < ars.length; index++) {
+      const curr_width = ars[index] * height
+      const min_expand_width = min_width - curr_width
+      if (min_expand_width > 0) {
+        const width_left = screen_width_minus_margins - sum_widths
+        const expand_width = Math.min(width_left, max_expanded_width - curr_width)
+        if (expand_width < min_expand_width) {
+          return null
+        }
+        const new_width = curr_width + expand_width
+        ars[index] = new_width / height
+        sum_widths += expand_width
+        sum_ars = ars.reduce((sum, ar) => sum + ar, 0)
+      }
+    }
+
+    return { row_items, ars, sum_ars, height, sum_widths, screen_width_minus_margins }
+  }
+
   function finish_row(): void {
     if (
       no_embed_chunk.length > 0 &&
@@ -287,15 +303,15 @@ function Layout(props: LayoutProps) {
       <SubmissionRow
         key={rows.length}
         is_alt={rows.length % 2 === 0}
-        row={row}
+        row={curr_row}
         items_shown={items.length}
         items_loaded={items_loaded}
         items_offset={items_offset}
         scroll={scroll}
       />
     )
-    push_items(row.row_items)
-    row = start_row()
+    push_items(curr_row.row_items)
+    curr_row = start_row()
   }
 
   var items_to_process = items.slice()
@@ -308,31 +324,37 @@ function Layout(props: LayoutProps) {
       }
       no_embed_chunk.push(item)
     } else {
-      const new_row = add_to_row(screen_width, screen_height, row, item)
-      if (row.row_items.length > 0 && new_row.height < min_height) {
+      const new_row = add_to_row(item)
+      if (
+        curr_row.row_items.length > 0 &&
+        (new_row == null || new_row.height < min_height)
+      ) {
         finish_row()
-        row = add_to_row(screen_width, screen_height, row, item)
+        curr_row = add_to_row(item)
       } else {
-        row = new_row
+        curr_row = new_row
       }
 
-      if (row.row_items.length === 1) {
+      if (curr_row.row_items.length === 1) {
         row_start_idx = item_idx
       }
 
-      if (row.sum_widths > 0.95 * row.screen_width_minus_margins) {
+      if (curr_row.sum_widths > 0.95 * curr_row.screen_width_minus_margins) {
         finish_row()
       }
     }
 
-    if (row.row_items.length > 0 && row_start_idx < item_idx - no_embed_lookahead) {
+    if (
+      curr_row.row_items.length > 0 &&
+      row_start_idx < item_idx - no_embed_lookahead
+    ) {
       finish_row()
     }
 
     item_idx++
   }
 
-  if (row.row_items.length > 0) {
+  if (curr_row.row_items.length > 0) {
     finish_row()
   }
   if (no_embed_chunk.length > 0) {
@@ -437,6 +459,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
             is_only_item={row_items.length === 1}
             is_alt={is_alt}
             submission={item}
+            height={row?.height}
             max_width={widths[index]}
             idx={items_offset + index}
           />
@@ -456,6 +479,7 @@ interface SubmissionDisplayProps {
   is_alt: boolean
   is_only_item: boolean
   submission: any
+  height?: number
   max_width?: number
   idx?: number
   full_screen?: FullscreenInteractions
@@ -467,6 +491,7 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   const {
     is_only_item,
     submission,
+    height,
     max_width,
     idx,
     full_screen,
@@ -631,7 +656,10 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               </>
             )}
 
-            <div className="embed-container">
+            <div
+              className="embed-container"
+              style={{ maxWidth: `${get_embed_ar(submission.embed) * height}px` }}
+            >
               {embed_type === "html" && (
                 <HtmlEmbed
                   embed={submission.embed}
@@ -729,7 +757,7 @@ const ImageEmbed = memo((props: EmbedProps) => {
   const [show_video, set_show_video] = useState(false)
 
   return (
-    <>
+    <div>
       <div
         className={`px-1 controls${
           embed.embed_type === "image" || full_screen ? "" : " always-show"
@@ -802,13 +830,17 @@ const ImageEmbed = memo((props: EmbedProps) => {
           />
         )}
       </div>
-    </>
+    </div>
   )
 })
 
-function get_ratio_padding_top(embed: Embed): string {
-  const width = embed.width ?? 16
-  const height = embed.height ?? 9
-  const percent = 100 * (height / width)
+function get_ratio_padding_top(embed?: Embed): string {
+  const percent = 100 / get_embed_ar(embed)
   return `${percent.toFixed(2)}%`
+}
+
+function get_embed_ar(embed?: Embed): number {
+  const width = embed?.width ?? 16
+  const height = embed?.height ?? 9
+  return width / height
 }

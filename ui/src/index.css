@@ -85,6 +85,7 @@ div.sub-container.show div.linkblocker {
 
 div.embed-container {
   position: relative;
+  margin: 0 auto;
 }
 
 div.embed {
