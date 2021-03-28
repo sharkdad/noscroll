@@ -3,6 +3,8 @@ import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
 import { get, SVC_WEB_ROOT, wrapAsync } from "./utils"
 import {
+  DENSITIES,
+  Density,
   LoadId,
   Location,
   Locations,
@@ -23,6 +25,7 @@ export interface NavbarProps {
   load_id: LoadId
   update: UpdateLoadId
   set_light_mode: (is_light_mode: boolean) => void
+  set_density: (density: Density) => void
 }
 
 function create_locations_loader(
@@ -47,10 +50,10 @@ function create_locations_loader(
 }
 
 export function Navbar(props: NavbarProps) {
-  const { update, load_id, set_light_mode } = props
+  const { update, load_id, set_light_mode, set_density } = props
   const { reddit_user, page_path, sort_method, time_filter } = load_id
 
-  const { app_details, is_light_mode } = useContext(AppContext)
+  const { app_details, is_light_mode, density } = useContext(AppContext)
   const { reddit_users, is_authenticated } = app_details
 
   const [page_location, set_page_location] = useState<Location | null>(null)
@@ -254,6 +257,33 @@ export function Navbar(props: NavbarProps) {
           <form className="form-inline">
             <div className="input-group py-2 py-lg-0 mr-sm-2">
               <ThemeSelector set_light_mode={set_light_mode} />
+            </div>
+            <div className="input-group py-2 py-lg-0">
+              <>
+                <button
+                  className="btn btn-link nav-link dropdown-toggle"
+                  id="density-dropdown"
+                  data-toggle="dropdown"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  Density
+                </button>
+                <div className="dropdown-menu" aria-labelledby="density-dropdown">
+                  {DENSITIES.map((d) => (
+                    <button
+                      key={d.name}
+                      className={`dropdown-item${
+                        d.name === density.name ? " active" : ""
+                      }`}
+                      type="button"
+                      onClick={() => set_density(d)}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </>
             </div>
             <div className="input-group py-2 py-lg-0">
               {!is_authenticated && (

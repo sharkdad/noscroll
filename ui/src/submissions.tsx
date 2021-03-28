@@ -1,6 +1,5 @@
 import React, { useState, useEffect, memo, useContext, useRef, UIEvent } from "react"
 import { Link, useHistory, useLocation } from "react-router-dom"
-import { createFalse } from "typescript"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
 import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
@@ -222,7 +221,8 @@ function start_row(): MediaRow {
 
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
-  const { is_authenticated } = useContext(AppContext).app_details
+  const { app_details, density } = useContext(AppContext)
+  const { is_authenticated } = app_details
 
   const [window_state, set_window_state] = useState<WindowState>({
     inner_width: document.documentElement.clientWidth,
@@ -234,9 +234,9 @@ function Layout(props: LayoutProps) {
   scroll.expand_item_refs(items.length)
   const rows = []
   const screen_width = window_state.inner_width - 32
-  const screen_height = window_state.inner_height - 128
-  const min_height = Math.min(400, screen_height)
-  const min_width = Math.min(300, screen_width)
+  const screen_height = Math.min(window_state.inner_height, 800 * density.factor) - 128
+  const min_height = Math.min(400 * density.factor, screen_height)
+  const min_width = Math.min(200, screen_width)
   const max_expanded_width = Math.min(min_width * 1.5, screen_width)
   const no_embed_lookahead = Math.ceil(PAGE_SIZE / 2)
 
@@ -398,9 +398,13 @@ function Layout(props: LayoutProps) {
   useEffect(() => {
     const timer = setInterval(() => {
       if (
+        !document.fullscreenElement &&
         window.innerHeight !== last_window_state.current.inner_height &&
         document.documentElement.clientWidth !== last_window_state.current.inner_width
       ) {
+        console.log(
+          `Screen dimensions changed: ${window.innerHeight} ${document.documentElement.clientWidth} ${window.devicePixelRatio}`
+        )
         set_window_state({
           inner_height: window.innerHeight,
           inner_width: document.documentElement.clientWidth,

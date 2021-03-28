@@ -5,6 +5,8 @@ import { useParams, useLocation, useHistory } from "react-router-dom"
 import {
   AppDetails,
   AppGlobals,
+  DENSITIES,
+  Density,
   LoadId,
   SortBy,
   SORT_METHODS,
@@ -25,6 +27,17 @@ function get_app_path(page_path: string, sort_str: string): string {
   return `/${page_path ? `${page_path}/` : ""}${sort_str ? `${sort_str}/` : ""}`
 }
 
+const DENSITY_KEY = "density"
+
+function get_density(): Density {
+  const saved_density_str = localStorage.getItem(DENSITY_KEY)
+  return DENSITIES.find((d) => d.name === saved_density_str) ?? DENSITIES[2]
+}
+
+function save_density(density: Density): void {
+  localStorage.setItem(DENSITY_KEY, density.name)
+}
+
 export function App(props: AppProps) {
   const { app_details } = props
   const { reddit_users, feeds } = app_details
@@ -32,10 +45,16 @@ export function App(props: AppProps) {
   const [app_globals, set_app_globals] = useState<AppGlobals>({
     app_details,
     is_light_mode: is_light_mode_enabled(),
+    density: get_density(),
   })
 
   function set_light_mode(is_light_mode: boolean): void {
     set_app_globals((g) => ({ ...g, is_light_mode }))
+  }
+
+  function set_density(density: Density): void {
+    set_app_globals((g) => ({ ...g, density }))
+    save_density(density)
     $("#navbarSupportedContent").collapse("hide")
   }
 
@@ -114,7 +133,12 @@ export function App(props: AppProps) {
 
   return (
     <AppContext.Provider value={app_globals}>
-      <Navbar load_id={load_id} update={update} set_light_mode={set_light_mode} />
+      <Navbar
+        load_id={load_id}
+        update={update}
+        set_light_mode={set_light_mode}
+        set_density={set_density}
+      />
       <div className="container-fluid mt-5 pt-4 px-0">
         <LinkLoader key={load_key} load_id={load_id} />
       </div>

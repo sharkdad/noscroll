@@ -15,6 +15,14 @@ export const TIME_FILTERS: TimeFilter[] = [
   { name: "hour", label: "Now" },
 ]
 
+export const DENSITIES: Density[] = [
+  { name: "fs", label: "Full screen", factor: 100 },
+  { name: "lo", label: "Low", factor: 1.25 },
+  { name: "def", label: "Default", factor: 1 },
+  { name: "hi", label: "High", factor: 0.75 },
+  { name: "max", label: "Highest", factor: 0.5 },
+]
+
 export interface SortBy {
   name: string
   label: string
@@ -24,6 +32,12 @@ export interface SortBy {
 export interface TimeFilter {
   name: string
   label: string
+}
+
+export interface Density {
+  name: string
+  label: string
+  factor: number
 }
 
 export interface LocationFeed {
@@ -40,6 +54,7 @@ export interface AppDetails {
 export interface AppGlobals {
   app_details: AppDetails
   is_light_mode: boolean
+  density: Density
 }
 
 export interface Location {
