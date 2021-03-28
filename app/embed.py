@@ -133,7 +133,7 @@ def embed_video(url_field: str, md: Mapping, base_md: Mapping) -> Optional[Embed
         return None
     preview_image = force_embed_preview_image(base_md) or Embed(EMBED_TYPE_IMAGE)
     vid = Embed(EMBED_TYPE_VIDEO, url, None, md.get("width"), md.get("height"))
-    return replace(preview_image, embed_type=EMBED_TYPE_VIDEO, video=vid)
+    return replace(vid, url=preview_image.url, video=vid)
 
 
 def embed_image(

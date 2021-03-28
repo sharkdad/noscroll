@@ -1,5 +1,6 @@
 import React, { useState, useEffect, memo, useContext, useRef, UIEvent } from "react"
 import { Link, useHistory, useLocation } from "react-router-dom"
+import { createFalse } from "typescript"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
 import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
@@ -128,6 +129,9 @@ export function Fullscreen(props: FullscreenProps) {
     const screen_width = window_state.inner_width - 20
     const screen_height = window_state.inner_height
 
+    const min_width = Math.min(300, screen_width)
+    const max_expanded_width = Math.min(min_width * 1.5, screen_width)
+
     var embed = null
     if (is_gallery) {
       embed = cached_item.current.embed.gallery[gallery_idx]
@@ -142,6 +146,11 @@ export function Fullscreen(props: FullscreenProps) {
     const func = zoom ? Math.max : Math.min
     max_height = func(screen_width / ar, screen_height)
     max_width = Math.floor(max_height * ar)
+
+    if (max_width < min_width) {
+      max_width = max_expanded_width
+      max_height = max_width / ar
+    }
   }
 
   return (
@@ -162,6 +171,7 @@ export function Fullscreen(props: FullscreenProps) {
               <SubmissionDisplay
                 is_alt={false}
                 is_only_item={false}
+                is_cropped={false}
                 submission={item}
                 height={max_height}
                 max_width={max_width}
@@ -191,6 +201,7 @@ interface WindowState {
 interface MediaRow {
   row_items: any[]
   ars: number[]
+  is_cropped: boolean[]
   sum_ars: number
   height: number
   sum_widths: number
@@ -201,6 +212,7 @@ function start_row(): MediaRow {
   return {
     row_items: [],
     ars: [],
+    is_cropped: [],
     sum_ars: 0,
     height: 0,
     sum_widths: 0,
@@ -265,6 +277,7 @@ function Layout(props: LayoutProps) {
         : 2 / 3
     const row_items = [...curr_row.row_items, item]
     const ars = [...curr_row.ars, ar]
+    const is_cropped = [...curr_row.is_cropped, false]
     let sum_ars = curr_row.sum_ars + ar
     const num_margins = row_items.length - 1
     const screen_width_minus_margins = screen_width - num_margins * 16
@@ -283,12 +296,21 @@ function Layout(props: LayoutProps) {
         }
         const new_width = curr_width + expand_width
         ars[index] = new_width / height
+        is_cropped[index] = true
         sum_widths += expand_width
         sum_ars = ars.reduce((sum, ar) => sum + ar, 0)
       }
     }
 
-    return { row_items, ars, sum_ars, height, sum_widths, screen_width_minus_margins }
+    return {
+      row_items,
+      ars,
+      sum_ars,
+      is_cropped,
+      height,
+      sum_widths,
+      screen_width_minus_margins,
+    }
   }
 
   function finish_row(): void {
@@ -458,6 +480,7 @@ const SubmissionRow = memo((props: SubmissionRowProps) => {
           <SubmissionDisplay
             is_only_item={row_items.length === 1}
             is_alt={is_alt}
+            is_cropped={row?.is_cropped[index] ?? false}
             submission={item}
             height={row?.height}
             max_width={widths[index]}
@@ -478,6 +501,7 @@ interface SubmissionInteractions {
 interface SubmissionDisplayProps {
   is_alt: boolean
   is_only_item: boolean
+  is_cropped: boolean
   submission: any
   height?: number
   max_width?: number
@@ -490,6 +514,7 @@ interface SubmissionDisplayProps {
 const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
   const {
     is_only_item,
+    is_cropped,
     submission,
     height,
     max_width,
@@ -656,45 +681,31 @@ const SubmissionDisplay = memo((props: SubmissionDisplayProps) => {
               </>
             )}
 
-            <div
-              className="embed-container"
-              style={{ maxWidth: `${get_embed_ar(submission.embed) * height}px` }}
-            >
-              {embed_type === "html" && (
-                <HtmlEmbed
-                  embed={submission.embed}
-                  title={submission.title}
-                  full_screen={full_screen}
-                />
-              )}
-              {embed_type === "video" && full_screen && (
-                <VideoEmbed
-                  embed={submission.embed.video}
-                  title={submission.title}
-                  full_screen={full_screen}
-                />
-              )}
-              {embed_type === "video" && !full_screen && (
-                <ImageEmbed
-                  embed={submission.embed}
-                  title={submission.title}
-                  interactions={interactions}
-                  full_screen={full_screen}
-                />
-              )}
-              {(embed_type === "image" || embed_type === "gallery") && (
-                <ImageEmbed
-                  embed={
-                    gallery_idx == null
-                      ? submission.embed
-                      : submission.embed.gallery[gallery_idx]
-                  }
-                  title={submission.title}
-                  interactions={interactions}
-                  full_screen={full_screen}
-                />
-              )}
-            </div>
+            {embed_type === "html" && (
+              <HtmlEmbed
+                embed={submission.embed}
+                title={submission.title}
+                height={height}
+                full_screen={full_screen}
+                is_cropped={false}
+              />
+            )}
+            {(embed_type === "image" ||
+              embed_type === "gallery" ||
+              embed_type === "video") && (
+              <ImageEmbed
+                embed={
+                  gallery_idx == null
+                    ? submission.embed
+                    : submission.embed.gallery[gallery_idx]
+                }
+                title={submission.title}
+                height={height}
+                interactions={interactions}
+                full_screen={full_screen}
+                is_cropped={is_cropped}
+              />
+            )}
           </>
         )}
       </div>
@@ -714,29 +725,39 @@ interface Embed {
 interface EmbedProps {
   embed: Embed
   title: string
+  height: number
   interactions?: SubmissionInteractions
   full_screen?: FullscreenInteractions
+  is_cropped: boolean
 }
 
 const HtmlEmbed = memo((props: EmbedProps) => {
-  const { embed } = props
+  const { embed, height } = props
   const { html } = embed
   const pt = get_ratio_padding_top(embed)
 
   return (
     <div
-      className="embed"
-      style={{ paddingTop: pt }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+      className="embed-container"
+      style={{ width: `${get_embed_ar(embed) * height}px` }}
+    >
+      <div
+        className="embed"
+        style={{ paddingTop: pt }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   )
 })
 
 const VideoEmbed = memo((props: EmbedProps) => {
-  const { url } = props.embed
+  const { embed, height } = props
 
   return (
-    <div>
+    <div
+      className="embed-container"
+      style={{ width: `${get_embed_ar(embed) * height}px` }}
+    >
       <video
         controls
         playsInline
@@ -744,30 +765,45 @@ const VideoEmbed = memo((props: EmbedProps) => {
         autoPlay
         style={{ width: "100%", height: "auto" }}
       >
-        <source src={url} type="video/mp4" />
+        <source src={embed.url} type="video/mp4" />
       </video>
     </div>
   )
 })
 
 const ImageEmbed = memo((props: EmbedProps) => {
-  const { embed, interactions, full_screen } = props
+  const { embed, height, interactions, full_screen, is_cropped } = props
   const { url } = embed
 
   const [show_video, set_show_video] = useState(false)
 
   return (
-    <div>
+    <div style={{ position: "relative", height: `${height}px`, overflow: "hidden" }}>
       <div
         className={`px-1 controls${
-          embed.embed_type === "image" || full_screen ? "" : " always-show"
+          !is_cropped && (embed.embed_type === "image" || full_screen)
+            ? ""
+            : " always-show"
         }`}
       >
         {embed.embed_type === "image" && (
           <>
-            <button onClick={interactions.on_click_zoom} className="btn btn-link mx-1">
-              <i className="bi bi-zoom-in"></i>
-            </button>
+            {is_cropped && (
+              <button
+                onClick={interactions.on_click_zoom}
+                className="btn btn-link mx-1"
+              >
+                <i className="bi bi-arrows-expand"></i>
+              </button>
+            )}
+            {!is_cropped && (
+              <button
+                onClick={interactions.on_click_zoom}
+                className="btn btn-link mx-1"
+              >
+                <i className="bi bi-zoom-in"></i>
+              </button>
+            )}
             {full_screen && (
               <button
                 className="btn btn-link mx-1"
@@ -818,7 +854,9 @@ const ImageEmbed = memo((props: EmbedProps) => {
           <VideoEmbed
             embed={embed.video}
             title={props.title}
+            height={height}
             full_screen={full_screen}
+            is_cropped={false}
           />
         )}
         {!show_video && url && (
