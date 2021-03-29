@@ -38,6 +38,20 @@ function save_density(density: Density): void {
   localStorage.setItem(DENSITY_KEY, density.name)
 }
 
+const SHOW_NSFW_KEY = "show-nsfw"
+
+function get_show_nsfw(): boolean {
+  return localStorage.getItem(SHOW_NSFW_KEY) != null
+}
+
+function save_show_nsfw(show_nsfw: boolean): void {
+  if (show_nsfw) {
+    localStorage.setItem(SHOW_NSFW_KEY, "true")
+  } else {
+    localStorage.removeItem(SHOW_NSFW_KEY)
+  }
+}
+
 export function App(props: AppProps) {
   const { app_details } = props
   const { reddit_users, feeds } = app_details
@@ -45,11 +59,17 @@ export function App(props: AppProps) {
   const [app_globals, set_app_globals] = useState<AppGlobals>({
     app_details,
     is_light_mode: is_light_mode_enabled(),
+    show_nsfw: get_show_nsfw(),
     density: get_density(),
   })
 
   function set_light_mode(is_light_mode: boolean): void {
     set_app_globals((g) => ({ ...g, is_light_mode }))
+  }
+
+  function set_show_nsfw(show_nsfw: boolean): void {
+    set_app_globals((g) => ({ ...g, show_nsfw }))
+    save_show_nsfw(show_nsfw)
   }
 
   function set_density(density: Density): void {
@@ -137,6 +157,7 @@ export function App(props: AppProps) {
         load_id={load_id}
         update={update}
         set_light_mode={set_light_mode}
+        set_show_nsfw={set_show_nsfw}
         set_density={set_density}
       />
       <div className="container-fluid mt-5 pt-4 px-0">

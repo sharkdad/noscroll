@@ -40,6 +40,7 @@ class Embed:
     height: Optional[int] = None
     gallery: Optional[List[Embed]] = None
     video: Optional[Embed] = None
+    over_18: Optional[bool] = None
 
 
 # pylint: disable=no-member

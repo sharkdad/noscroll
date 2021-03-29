@@ -724,6 +724,7 @@ interface Embed {
   width?: number
   height?: number
   video?: Embed
+  over_18?: boolean
 }
 
 interface EmbedProps {
@@ -779,17 +780,28 @@ const ImageEmbed = memo((props: EmbedProps) => {
   const { embed, height, interactions, full_screen, is_cropped } = props
   const { url } = embed
 
+  const { show_nsfw } = useContext(AppContext)
+
+  const is_nsfw = !show_nsfw && !full_screen && (embed.over_18 ?? false)
+
   const [show_video, set_show_video] = useState(false)
+  const [blur_nsfw, set_blur_nsfw] = useState(true)
+
+  const always_show_controls =
+    !full_screen &&
+    (embed.embed_type !== "image" || is_cropped || (is_nsfw && blur_nsfw))
 
   return (
     <div style={{ position: "relative", height: `${height}px`, overflow: "hidden" }}>
-      <div
-        className={`px-1 controls${
-          !is_cropped && (embed.embed_type === "image" || full_screen)
-            ? ""
-            : " always-show"
-        }`}
-      >
+      <div className={`px-1 controls${always_show_controls ? " always-show" : ""}`}>
+        {is_nsfw && !show_video && (
+          <button
+            onClick={() => set_blur_nsfw((old) => !old)}
+            className="btn btn-link mx-1"
+          >
+            <i className={`bi bi-eye${blur_nsfw ? "" : "-slash"}`}></i>
+          </button>
+        )}
         {embed.embed_type === "image" && (
           <>
             {is_cropped && (
@@ -868,7 +880,7 @@ const ImageEmbed = memo((props: EmbedProps) => {
             alt={props.title}
             src={url}
             referrerPolicy="no-referrer"
-            className="preview"
+            className={`preview${is_nsfw && blur_nsfw ? " blur" : ""}`}
           />
         )}
       </div>

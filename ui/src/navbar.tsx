@@ -25,6 +25,7 @@ export interface NavbarProps {
   load_id: LoadId
   update: UpdateLoadId
   set_light_mode: (is_light_mode: boolean) => void
+  set_show_nsfw: (show_nsfw: boolean) => void
   set_density: (density: Density) => void
 }
 
@@ -50,10 +51,10 @@ function create_locations_loader(
 }
 
 export function Navbar(props: NavbarProps) {
-  const { update, load_id, set_light_mode, set_density } = props
+  const { update, load_id, set_light_mode, set_show_nsfw, set_density } = props
   const { reddit_user, page_path, sort_method, time_filter } = load_id
 
-  const { app_details, is_light_mode, density } = useContext(AppContext)
+  const { app_details, is_light_mode, show_nsfw, density } = useContext(AppContext)
   const { reddit_users, is_authenticated } = app_details
 
   const [page_location, set_page_location] = useState<Location | null>(null)
@@ -256,12 +257,26 @@ export function Navbar(props: NavbarProps) {
           </ul>
           <form className="form-inline">
             <div className="input-group py-2 py-lg-0 mr-sm-2">
+              <div className="custom-control custom-switch">
+                <input
+                  type="checkbox"
+                  className="custom-control-input"
+                  id="blur-nsfw"
+                  defaultChecked={!show_nsfw}
+                  onClick={() => set_show_nsfw(!show_nsfw)}
+                />
+                <label className="custom-control-label" htmlFor="blur-nsfw">
+                  Blur NSFW
+                </label>
+              </div>
+            </div>
+            <div className="input-group py-2 py-lg-0 mr-sm-2">
               <ThemeSelector set_light_mode={set_light_mode} />
             </div>
             <div className="input-group py-2 py-lg-0">
               <>
                 <button
-                  className="btn btn-link nav-link dropdown-toggle"
+                  className="btn btn-link dropdown-toggle"
                   id="density-dropdown"
                   data-toggle="dropdown"
                   aria-haspopup="true"
@@ -297,7 +312,7 @@ export function Navbar(props: NavbarProps) {
               {is_authenticated && (
                 <>
                   <button
-                    className="btn btn-link nav-link dropdown-toggle"
+                    className="btn btn-link dropdown-toggle"
                     id="userDropdown"
                     data-toggle="dropdown"
                     aria-haspopup="true"

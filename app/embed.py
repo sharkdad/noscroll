@@ -89,7 +89,9 @@ def embed_gallery(md: Mapping) -> Optional[Embed]:
     imgs = (media.get(media_id) for media_id in media_ids if media_id)
     srcs = (img.get("s") for img in imgs if img)
     es = [
-        embed_image(i.get("u"), i.get("x"), i.get("y"), EMBED_TYPE_GALLERY)
+        embed_image(
+            i.get("u"), i.get("x"), i.get("y"), md.get("over_18"), EMBED_TYPE_GALLERY
+        )
         for i in srcs
         if i
     ]
@@ -108,7 +110,11 @@ def force_embed_preview_image(md: Mapping) -> Optional[Embed]:
     def build_embed(img: Mapping) -> Optional[Embed]:
         src = img.get("source") or {}
         url = src.get("url")
-        return embed_image(url, src.get("width"), src.get("height")) if url else None
+        return (
+            embed_image(url, src.get("width"), src.get("height"), md.get("over_18"))
+            if url
+            else None
+        )
 
     preview = md.get("preview") or {}
     images = preview.get("images") or []
@@ -133,16 +139,17 @@ def embed_video(url_field: str, md: Mapping, base_md: Mapping) -> Optional[Embed
         return None
     preview_image = force_embed_preview_image(base_md) or Embed(EMBED_TYPE_IMAGE)
     vid = Embed(EMBED_TYPE_VIDEO, url, None, md.get("width"), md.get("height"))
-    return replace(vid, url=preview_image.url, video=vid)
+    return replace(preview_image, embed_type=EMBED_TYPE_VIDEO, video=vid)
 
 
 def embed_image(
     url: str,
     width: Optional[int],
     height: Optional[int],
+    over_18: Optional[bool],
     embed_type: str = EMBED_TYPE_IMAGE,
 ) -> Embed:
-    return Embed(embed_type, url, None, width, height)
+    return Embed(embed_type, url=url, width=width, height=height, over_18=over_18)
 
 
 def get_iframe_padding(md: Mapping) -> Optional[str]:

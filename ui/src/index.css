@@ -2,6 +2,10 @@ body {
   overflow-y: scroll;
 }
 
+.navbar .btn-link {
+  text-decoration: none;
+}
+
 .dropdown-menu {
   max-height: 75vh;
   overflow-y: auto;
@@ -21,6 +25,10 @@ div.container div.grid-row {
 img.preview {
   width: 100%;
   height: auto;
+}
+
+img.blur {
+  filter: blur(500px);
 }
 
 .preview-caption {
@@ -147,6 +155,7 @@ div.controls {
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.25s, z-index 0s 0.25s;
+  white-space: nowrap;
 }
 
 div.sub-container.show div.controls {

@@ -54,6 +54,7 @@ export interface AppDetails {
 export interface AppGlobals {
   app_details: AppDetails
   is_light_mode: boolean
+  show_nsfw: boolean
   density: Density
 }
 
