@@ -792,7 +792,10 @@ const ImageEmbed = memo((props: EmbedProps) => {
     (embed.embed_type !== "image" || is_cropped || (is_nsfw && blur_nsfw))
 
   return (
-    <div style={{ position: "relative", height: `${height}px`, overflow: "hidden" }}>
+    <div
+      className={`image-container${is_nsfw && blur_nsfw ? " blur" : ""}`}
+      style={{ height: `${height}px` }}
+    >
       <div className={`px-1 controls${always_show_controls ? " always-show" : ""}`}>
         {is_nsfw && !show_video && (
           <button
@@ -880,7 +883,7 @@ const ImageEmbed = memo((props: EmbedProps) => {
             alt={props.title}
             src={url}
             referrerPolicy="no-referrer"
-            className={`preview${is_nsfw && blur_nsfw ? " blur" : ""}`}
+            className="preview"
           />
         )}
       </div>

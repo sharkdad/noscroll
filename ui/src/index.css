@@ -91,6 +91,19 @@ div.sub-container.show div.linkblocker {
   z-index: -1;
 }
 
+div.image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+div.image-container.blur {
+  background-image: url(/blur.png);
+}
+
+div.image-container.blur img {
+  visibility: hidden;
+}
+
 div.embed-container {
   position: relative;
   margin: 0 auto;
