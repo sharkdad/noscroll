@@ -10,10 +10,9 @@ export interface SubmissionLoadingState {
 export class ScrollHandler {
   private observer: IntersectionObserver
   private item_divs: RefObject<HTMLDivElement>[] = []
-  private last_seen_div?: HTMLElement
-  private next_observe_idx = 0
+  private last_seen_id?: string
+  private is_resizing: boolean = false
 
-  private seen_ids = new Set<string>()
   private read_ids = new Set<string>()
 
   private next?: string = null
@@ -26,7 +25,7 @@ export class ScrollHandler {
     private set_loading_state: Dispatch<SetStateAction<SubmissionLoadingState>>
   ) {
     this.observer = new IntersectionObserver(this.intersection_change, {
-      threshold: [0, 1],
+      threshold: [0],
     })
   }
 
@@ -49,21 +48,24 @@ export class ScrollHandler {
     this.set_page_index(0)
   }
 
-  observe_new_items(): void {
-    if (this.next_observe_idx < this.item_divs.length) {
-      const new_divs = this.item_divs.slice(this.next_observe_idx)
-      new_divs.forEach((ref) => this.observer.observe(ref.current))
-      this.next_observe_idx = this.item_divs.length
-    }
-  }
-
-  scroll_to_last_seen(): void {
-    if (this.last_seen_div != null) {
-      const rect = this.last_seen_div.getBoundingClientRect()
-      window.scrollTo({ top: rect.top + window.scrollY })
+  update_after_layout_render(): void {
+    if (this.is_resizing) {
+      if (this.last_seen_id != null) {
+        const item_div = this.item_divs.find(
+          (r) => r.current?.dataset?.redditId === this.last_seen_id
+        )
+        if (item_div != null) {
+          const rect = item_div.current.getBoundingClientRect()
+          window.scrollTo({ top: rect.top + window.scrollY })
+        }
+      }
+      this.is_resizing = false
     }
     this.item_divs.forEach((ref) => this.observer.observe(ref.current))
-    this.next_observe_idx = this.item_divs.length
+  }
+
+  start_resize(): void {
+    this.is_resizing = true
   }
 
   async mark_as_read(is_authenticated: boolean): Promise<void> {
@@ -81,22 +83,17 @@ export class ScrollHandler {
       const element = entry.target as HTMLElement
       const reddit_id = element.dataset.redditId
       if (entry.isIntersecting) {
-        if (!this.seen_ids.has(reddit_id)) {
-          this.last_seen_div = element
-          this.seen_ids.add(reddit_id)
-          if (element.dataset.showNextPage === "true") {
-            this.set_page_index((last_index) => last_index + 1)
-          }
-          if (element.dataset.loadMore === "true" && this.is_more_results) {
-            callAsync(() => this.load_more())
-          }
+        if (!this.is_resizing) {
+          this.last_seen_id = reddit_id
         }
-      } else if (this.seen_ids.has(reddit_id) && entry.boundingClientRect.top <= 0) {
-        if (entry.boundingClientRect.top < 0) {
-          this.read_ids.add(reddit_id)
+        if (element.dataset.showNextPage === "true") {
+          this.set_page_index((last_index) => last_index + 1)
         }
-        this.seen_ids.delete(reddit_id)
-        this.observer.unobserve(element)
+        if (element.dataset.loadMore === "true" && this.is_more_results) {
+          callAsync(() => this.load_more())
+        }
+      } else if (entry.boundingClientRect.top < 0) {
+        this.read_ids.add(reddit_id)
       }
     })
   }

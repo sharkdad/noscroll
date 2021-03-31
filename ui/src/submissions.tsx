@@ -405,26 +405,20 @@ function Layout(props: LayoutProps) {
         console.log(
           `Screen dimensions changed: ${window.innerHeight} ${document.documentElement.clientWidth} ${window.devicePixelRatio}`
         )
-        set_window_state({
+        scroll.start_resize()
+        const new_state = {
           inner_height: window.innerHeight,
           inner_width: document.documentElement.clientWidth,
-        })
+        }
+        last_window_state.current = new_state
+        set_window_state(new_state)
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [scroll])
 
   useEffect(() => {
-    if (
-      window_state.inner_height !== last_window_state.current.inner_height ||
-      window_state.inner_width !== last_window_state.current.inner_width
-    ) {
-      scroll.scroll_to_last_seen()
-      last_window_state.current.inner_height = window_state.inner_height
-      last_window_state.current.inner_width = window_state.inner_width
-    } else {
-      scroll.observe_new_items()
-    }
+    scroll.update_after_layout_render()
   })
 
   return (
