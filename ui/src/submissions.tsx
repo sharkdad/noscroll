@@ -3,7 +3,7 @@ import { Link, useHistory, useLocation } from "react-router-dom"
 import { AppContext } from "./app"
 import { LoadId } from "./data"
 import { ScrollHandler, SubmissionLoadingState } from "./scrolling"
-import { callAsync, wrapAsync } from "./utils"
+import { ServiceClientContext } from "./utils"
 
 export interface LinkLoaderProps {
   load_id: LoadId
@@ -14,14 +14,28 @@ const PAGE_SIZE = 10
 export function LinkLoader(props: LinkLoaderProps) {
   const { load_id } = props
 
+  const service_client = useContext(ServiceClientContext)
+  const { is_authenticated } = useContext(AppContext).app_details
+
   const [loading_state, set_loading_state] = useState<SubmissionLoadingState>({
     results: [],
     is_loading: false,
   })
   const [page_index, set_page_index] = useState(-1)
-  const scroll = useRef(new ScrollHandler(load_id, set_page_index, set_loading_state))
-
+  const scroll = useRef(
+    new ScrollHandler(service_client, load_id, set_page_index, set_loading_state)
+  )
   const items = loading_state.results.slice(0, (page_index + 1) * PAGE_SIZE)
+
+  useEffect(() => {
+    scroll.current.load_first_page()
+  }, [scroll])
+
+  useEffect(() => {
+    const timer = setInterval(() => scroll.current.mark_as_read(is_authenticated), 5000)
+    return () => clearInterval(timer)
+  }, [scroll, is_authenticated])
+
   return (
     <>
       <Layout
@@ -221,8 +235,7 @@ function start_row(): MediaRow {
 
 function Layout(props: LayoutProps) {
   const { items, items_loaded, scroll } = props
-  const { app_details, density } = useContext(AppContext)
-  const { is_authenticated } = app_details
+  const { density } = useContext(AppContext)
 
   const [window_state, set_window_state] = useState<WindowState>({
     inner_width: document.documentElement.clientWidth,
@@ -382,18 +395,6 @@ function Layout(props: LayoutProps) {
   if (no_embed_chunk.length > 0) {
     finish_no_embed_chunk()
   }
-
-  useEffect(() => {
-    callAsync(() => scroll.load_first_page())
-  }, [scroll])
-
-  useEffect(() => {
-    const timer = setInterval(
-      wrapAsync(() => scroll.mark_as_read(is_authenticated)),
-      5000
-    )
-    return () => clearInterval(timer)
-  }, [scroll, is_authenticated])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -780,10 +781,17 @@ const ImageEmbed = memo((props: EmbedProps) => {
 
   const [show_video, set_show_video] = useState(false)
   const [blur_nsfw, set_blur_nsfw] = useState(true)
+  const [is_error, set_is_error] = useState(false)
+
+  const img_ref = useRef<HTMLImageElement>(null)
 
   const always_show_controls =
     !full_screen &&
     (embed.embed_type !== "image" || is_cropped || (is_nsfw && blur_nsfw))
+
+  useEffect(() => {
+    img_ref.current.addEventListener("error", () => set_is_error(true))
+  }, [url])
 
   return (
     <div
@@ -873,12 +881,28 @@ const ImageEmbed = memo((props: EmbedProps) => {
           />
         )}
         {!show_video && url && (
-          <img
-            alt={props.title}
-            src={url}
-            referrerPolicy="no-referrer"
-            className="preview"
-          />
+          <>
+            <div className="loading-container">
+              <div className="d-flex justify-content-center">
+                <>
+                  {is_error && <i className="bi bi-x-square"></i>}
+                  {!is_error && (
+                    <div className="spinner-grow loading" role="status">
+                      <span className="sr-only">Loading...</span>
+                    </div>
+                  )}
+                </>
+              </div>
+            </div>
+            <img
+              key={url}
+              ref={img_ref}
+              alt={props.title}
+              src={url}
+              referrerPolicy="no-referrer"
+              className="preview"
+            />
+          </>
         )}
       </div>
     </div>

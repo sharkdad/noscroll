@@ -1,6 +1,6 @@
 import { createRef, Dispatch, RefObject, SetStateAction } from "react"
 import { LoadId } from "./data"
-import { callAsync, get, put } from "./utils"
+import { ServiceClient } from "./utils"
 
 export interface SubmissionLoadingState {
   results: any[]
@@ -20,6 +20,7 @@ export class ScrollHandler {
   private is_more_results = true
 
   constructor(
+    private service_client: ServiceClient,
     private load_id: LoadId,
     private set_page_index: Dispatch<SetStateAction<number>>,
     private set_loading_state: Dispatch<SetStateAction<SubmissionLoadingState>>
@@ -72,7 +73,7 @@ export class ScrollHandler {
     const ids = Array.from(this.read_ids)
     if (ids.length > 0) {
       if (is_authenticated && this.load_id.sort_method.name === "curated") {
-        await put("/svc/api/submissions/mark_seen/", { ids })
+        await this.service_client.put("/svc/api/submissions/mark_seen/", { ids })
       }
       ids.forEach((id) => this.read_ids.delete(id))
     }
@@ -90,7 +91,7 @@ export class ScrollHandler {
           this.set_page_index((last_index) => last_index + 1)
         }
         if (element.dataset.loadMore === "true" && this.is_more_results) {
-          callAsync(() => this.load_more())
+          this.load_more()
         }
       } else if (entry.boundingClientRect.top < 0) {
         this.read_ids.add(reddit_id)
@@ -145,7 +146,7 @@ export class ScrollHandler {
       url = `/svc/api/submissions/?${searchParams}`
     }
 
-    const response = await (await get(url)).json()
+    const response = await (await this.service_client.get(url)).json()
     const last = response.results[response.results.length - 1]
     this.after = last?.id
     this.next = response.next

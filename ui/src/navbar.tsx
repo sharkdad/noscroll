@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, useContext, useEffect, useState } from "react"
 import { AppContext } from "./app"
 import { ThemeSelector } from "./theme"
-import { get, SVC_WEB_ROOT, wrapAsync } from "./utils"
+import { ServiceClientContext, SVC_WEB_ROOT } from "./utils"
 import {
   DENSITIES,
   Density,
@@ -29,30 +29,11 @@ export interface NavbarProps {
   set_density: (density: Density) => void
 }
 
-function create_locations_loader(
-  path: string,
-  set_locations: Dispatch<SetStateAction<Location[] | null>>,
-  is_authenticated: boolean,
-  reddit_user?: string
-): () => void {
-  return wrapAsync(async () => {
-    if (!is_authenticated) {
-      set_locations([])
-      return
-    }
-
-    const search_params = new URLSearchParams()
-    if (reddit_user != null) {
-      search_params.set("user", reddit_user)
-    }
-    const response: Locations = await (await get(`${path}?${search_params}`)).json()
-    set_locations(response.locations)
-  })
-}
-
 export function Navbar(props: NavbarProps) {
   const { update, load_id, set_light_mode, set_show_nsfw, set_density } = props
   const { reddit_user, page_path, sort_method, time_filter } = load_id
+
+  const service_client = useContext(ServiceClientContext)
 
   const { app_details, is_light_mode, show_nsfw, density } = useContext(AppContext)
   const { reddit_users, is_authenticated } = app_details
@@ -61,28 +42,32 @@ export function Navbar(props: NavbarProps) {
   const [multis, set_multis] = useState<Location[] | null>(null)
   const [subreddits, set_subreddits] = useState<Location[] | null>(null)
 
-  useEffect(
-    create_locations_loader(
-      "/svc/api/me/multis/",
-      set_multis,
-      is_authenticated,
-      reddit_user
-    ),
-    [is_authenticated, reddit_user]
-  )
+  useEffect(() => {
+    async function load_locations(
+      path: string,
+      set_locations: Dispatch<SetStateAction<Location[] | null>>
+    ): Promise<void> {
+      if (!is_authenticated) {
+        set_locations([])
+        return
+      }
 
-  useEffect(
-    create_locations_loader(
-      "/svc/api/me/subreddits/",
-      set_subreddits,
-      is_authenticated,
-      reddit_user
-    ),
-    [is_authenticated, reddit_user]
-  )
+      const search_params = new URLSearchParams()
+      if (reddit_user != null) {
+        search_params.set("user", reddit_user)
+      }
+      const response: Locations = await (
+        await service_client.get(`${path}?${search_params}`)
+      ).json()
+      set_locations(response.locations)
+    }
 
-  useEffect(
-    wrapAsync(async () => {
+    load_locations("/svc/api/me/multis/", set_multis)
+    load_locations("/svc/api/me/subreddits/", set_subreddits)
+  }, [service_client, is_authenticated, reddit_user])
+
+  useEffect(() => {
+    async function update_display_name(): Promise<void> {
       if (page_path !== page_location?.page_path) {
         set_page_location(null)
         const search_params = new URLSearchParams()
@@ -91,13 +76,16 @@ export function Navbar(props: NavbarProps) {
           search_params.set("user", reddit_user)
         }
         const response: Location = await (
-          await get(`/svc/api/submissions/get_display_name/?${search_params}`)
+          await service_client.get(
+            `/svc/api/submissions/get_display_name/?${search_params}`
+          )
         ).json()
         set_page_location(response)
       }
-    }),
-    [is_authenticated, reddit_user, page_path, page_location]
-  )
+    }
+
+    update_display_name()
+  }, [service_client, is_authenticated, reddit_user, page_path, page_location])
 
   function go_to_page(location: Location): void {
     set_page_location(location)
