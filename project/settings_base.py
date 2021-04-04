@@ -3,7 +3,7 @@ from datetime import timedelta
 TASK_DELAY = timedelta(minutes=10)
 HN_TOP_STORIES = 30
 REDDIT_USER_AGENT = "script:slothclient:1.0 (by /u/slothtron)"
-REDDIT_OAUTH_USER_AGENT = "django:slothweb:1.0 (by /u/slothtron)"
+REDDIT_OAUTH_USER_AGENT = "django:squidscroll:1.0 (by /u/slothtron)"
 REDDIT_TOP_SUBMISSIONS = 100
 REDDIT_SCORING_TOP_TIME = "month"
 REDDIT_SCORING_TOP_LIMIT = 10
