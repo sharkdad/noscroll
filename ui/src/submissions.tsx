@@ -790,7 +790,9 @@ const ImageEmbed = memo((props: EmbedProps) => {
     (embed.embed_type !== "image" || is_cropped || (is_nsfw && blur_nsfw))
 
   useEffect(() => {
-    img_ref.current.addEventListener("error", () => set_is_error(true))
+    if (img_ref.current != null) {
+      img_ref.current.addEventListener("error", () => set_is_error(true))
+    }
   }, [url])
 
   return (
