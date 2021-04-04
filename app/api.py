@@ -7,7 +7,7 @@ from praw import Reddit
 from praw.models import Submission
 from rest_framework.decorators import action
 from rest_framework.pagination import CursorPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
@@ -173,6 +173,7 @@ class SubmissionViewSet(ViewSet):
     def mark_seen(self, request):
         ids = request.data.get("ids") or []
         SeenSubmissionDao.mark_seen(request.user.id, ids)
+        return Response()
 
 
 class LinkSerializer(ModelSerializer):
@@ -215,6 +216,7 @@ class LinkPagination(CursorPagination):
 
 
 class LinkViewSet(ReadOnlyModelViewSet):
+    permission_classes = [IsAdminUser]
     serializer_class = LinkSerializer
     filterset_class = LinkFilterSet
     pagination_class = LinkPagination

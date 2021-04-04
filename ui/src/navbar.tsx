@@ -104,7 +104,7 @@ export function Navbar(props: NavbarProps) {
     <nav className={`navbar fixed-top navbar-expand-lg ${navbar_class} py-2`}>
       <div className="container">
         <a className="navbar-brand" href="/">
-          noscroll
+          squidscroll
         </a>
         <button
           className="navbar-toggler"
@@ -201,7 +201,7 @@ export function Navbar(props: NavbarProps) {
                 {sort_method.label}
               </button>
               <div className="dropdown-menu" aria-labelledby="navbarDropdown">
-                {SORT_METHODS.map((sort) => (
+                {SORT_METHODS.filter((sort) => sort.name !== "curated").map((sort) => (
                   <button
                     key={sort.name}
                     type="button"

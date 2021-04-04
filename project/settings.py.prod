@@ -11,6 +11,10 @@ ALLOWED_HOSTS = ["noscroll.sharkdad.io"]
 DEBUG = False
 SECRET_KEY = ""
 
+DEFAULT_RENDERER_CLASSES = (
+    "rest_framework.renderers.JSONRenderer",
+)
+
 SOCIALACCOUNT_PROVIDERS["reddit"]["APP"] = {
     "client_id": REDDIT_OAUTH_CLIENT_ID,
     "secret": REDDIT_OAUTH_CLIENT_SECRET,
