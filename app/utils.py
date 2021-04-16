@@ -6,7 +6,7 @@ from typing import Any, Iterable, Optional, Type, TypeVar
 
 from rest_framework.renderers import JSONRenderer
 from pydantic.json import pydantic_encoder
-from pydantic.tools import parse_obj_as
+from pydantic.tools import parse_obj_as, parse_raw_as
 from rest_framework.utils import encoders
 
 
@@ -23,6 +23,10 @@ def get_ext(path: str) -> str:
 
 def to_json(thing: Any) -> str:
     return json.dumps(thing, default=pydantic_encoder)
+
+
+def from_raw(type_: Type[T], raw: str) -> T:
+    return parse_raw_as(type_, raw)
 
 
 def from_obj(type_: Type[T], obj: Any) -> T:

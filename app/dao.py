@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Iterable
+import json
 
-from django.db import connection
+from django.db import transaction
 
 from .data import Token
 from .models import Profile, RelativeScoring, SeenSubmission
@@ -11,15 +12,16 @@ from .utils import to_json
 class ProfileDao:
     manager = Profile.objects
 
-    @staticmethod
-    def write_token(user_id: int, reddit_uid: str, token: Token):
-        tokens = {reddit_uid: token}
-        sql = """
-            INSERT INTO app_profile (user_id, tokens) VALUES (%s, %s)
-            ON CONFLICT (user_id) DO UPDATE SET tokens = app_profile.tokens || excluded.tokens
-        """
-        with connection.cursor() as cursor:
-            cursor.execute(sql, [user_id, to_json(tokens)])
+    @classmethod
+    @transaction.atomic
+    def write_token(cls, user_id: int, reddit_uid: str, token: Token) -> None:
+        tokens = json.loads(to_json({reddit_uid: token}))
+        obj, created = cls.manager.select_for_update().get_or_create(
+            user_id=user_id, defaults={"enc_tokens": tokens}
+        )
+        if not created:
+            obj.enc_tokens = json.loads(obj.enc_tokens) | tokens
+            obj.save()
 
 
 class RelativeScoringDao:
