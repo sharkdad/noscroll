@@ -1,4 +1,5 @@
 from typing import Callable, Iterable, List
+import json
 
 from django.contrib.messages import get_messages
 from django.db.models import Subquery
@@ -41,7 +42,7 @@ class AppDetailsViewSet(ViewSet):
     def list(self, request: Request):
         if request.user.is_authenticated:
             feeds = list(get_multi_feeds())
-            reddit_users = sorted(request.user.profile.tokens.keys())
+            reddit_users = sorted(json.loads(request.user.profile.enc_tokens).keys())
         else:
             feeds = []
             reddit_users = []

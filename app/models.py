@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Mapping, Optional
 import uuid
 
 from django.conf import settings
@@ -19,14 +19,20 @@ from django.db.models import (
     UniqueConstraint,
     UUIDField,
 )
+from django_cryptography.fields import encrypt
 
-from .data import Embed
+from .data import Embed, Token
 from .embed import get_embed
+from .utils import from_raw
 
 
 class Profile(Model):
     user = OneToOneField(settings.AUTH_USER_MODEL, primary_key=True, on_delete=CASCADE)
     tokens = JSONField(default=dict)
+    enc_tokens = encrypt(JSONField(default=dict))
+
+    def parse_enc_tokens(self) -> Mapping[str, Token]:
+        return from_raw(Mapping[str, Token], self.enc_tokens)  # type: ignore
 
 
 class SeenSubmission(Model):

@@ -22,7 +22,7 @@ from .dao import ProfileDao, RelativeScoringDao
 from .data import Location, Submission, Token
 from .embed import get_embed
 from .models import Feed, FeedType, Link, Profile, RelativeScoring
-from .utils import from_obj, from_timestamp_utc
+from .utils import from_timestamp_utc
 
 T = TypeVar("T")
 
@@ -30,7 +30,7 @@ T = TypeVar("T")
 def use_oauth_reddit(
     profile: Profile, username: Optional[str], func: Callable[[Reddit], T]
 ) -> T:
-    tokens = from_obj(Mapping[str, Token], profile.tokens)  # type: ignore
+    tokens = profile.parse_enc_tokens()
     user = username or sorted(tokens.keys())[0]
     token = tokens[user]
 

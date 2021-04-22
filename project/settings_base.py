@@ -21,11 +21,15 @@ SITE_ID = 1
 STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
 
+CRYPTOGRAPHY_SALT = "noscroll"
+USERNAME_SALT = "noscroll"
+
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_SESSION_REMEMBER = True
 LOGIN_REDIRECT_URL = LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_STORE_TOKENS = True
+SOCIALACCOUNT_ADAPTER = "app.allauth.NoscrollSocialAccountAdapter"
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -63,7 +67,7 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "allauth.socialaccount.providers.reddit",
+    "reddit_enc",
     "app.apps.AppConfig",
     "django.contrib.admin",
     "django.contrib.auth",

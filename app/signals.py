@@ -26,4 +26,4 @@ def populate_profile(*_, **kwargs):
 
     t = login.token
     token = Token(t.token, t.token_secret, t.expires_at)
-    ProfileDao.write_token(request.user.id, login.account.uid, token)
+    ProfileDao.write_token(request.user.id, request.raw_username, token)
