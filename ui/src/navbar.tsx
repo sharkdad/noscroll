@@ -120,6 +120,9 @@ export function Navbar(props: NavbarProps) {
 
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav mr-auto">
+            <li className="nav-item">
+              <a className="btn btn-link nav-link" href="/about/">About</a>
+            </li>
             <li className="nav-item dropdown">
               <button
                 className="btn btn-link nav-link dropdown-toggle"

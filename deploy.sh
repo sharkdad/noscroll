@@ -9,3 +9,4 @@ sudo docker exec -it noscroll python /noscroll/manage.py migrate --no-input
 
 sudo docker cp noscroll:/noscroll/dist/. dist
 sudo docker cp noscroll:/noscroll/ui/build/. dist
+sudo docker cp noscroll:/noscroll/static/. dist
