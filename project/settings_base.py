@@ -1,4 +1,5 @@
 from datetime import timedelta
+from time import gmtime
 
 TASK_DELAY = timedelta(minutes=10)
 HN_TOP_STORIES = 30
@@ -127,8 +128,9 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "[{asctime}] [{levelname}] [{module}] {message}",
-            "style": "{",
+            "format": "%(asctime)s.%(msecs)03dZ %(levelname)s [%(module)s] %(message)s",
+            "datefmt": "%Y-%m-%dT%H:%M:%S",
+            "converter": gmtime,
         },
     },
     "handlers": {

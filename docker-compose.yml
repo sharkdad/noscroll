@@ -9,3 +9,9 @@ services:
     container_name: noscroll
     network_mode: host
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: squidscroll-django
+        awslogs-create-group: true
+        awslogs-datetime-format: "%Y-%m-%dT%H:%M:%S.%LZ"
