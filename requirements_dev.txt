@@ -1,9 +1,9 @@
 -r requirements.txt
 black
+coloredlogs
 django-debug-toolbar
-django-extensions
-jupyter
 mypy
 pylint
 pylint-django
+python-dotenv
 rope

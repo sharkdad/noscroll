@@ -1,6 +1,7 @@
 [MASTER]
 extension-pkg-whitelist=pydantic
 load-plugins=pylint_django
+django-settings-module=project.settings
 
 [MESSAGES CONTROL]
 disable=C,W0703,E1136

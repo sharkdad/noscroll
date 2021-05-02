@@ -129,4 +129,4 @@ dmypy.json
 mylocal_db/
 logfile
 
-project/settings.py
+.env

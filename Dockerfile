@@ -23,4 +23,4 @@ RUN yarn build
 
 WORKDIR /noscroll
 EXPOSE 8001
-CMD ["gunicorn", "--bind=127.0.0.1:8001", "--threads=10", "project.wsgi"]
+CMD ["gunicorn"]

@@ -6,8 +6,8 @@
     "python.formatting.provider": "black",
     "editor.formatOnSave": true,
     "python.linting.pylintCategorySeverity.refactor": "Warning",
-    "editor.formatOnPaste": true,
     "[typescriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnPaste": true
     }
 }

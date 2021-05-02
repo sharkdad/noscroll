@@ -1,16 +1,35 @@
 from datetime import timedelta
+from os import environ
 from time import gmtime
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
+STAGE = environ["NS_STAGE"]
+REDDIT_USER_AGENT = environ["NS_USER_AGENT"]
+REDDIT_CLIENT_ID = environ["NS_CLIENT_ID"]
+REDDIT_CLIENT_SECRET = environ["NS_CLIENT_SECRET"]
+REDDIT_OAUTH_USER_AGENT = environ["NS_OAUTH_USER_AGENT"]
+REDDIT_OAUTH_CLIENT_ID = environ["NS_OAUTH_CLIENT_ID"]
+REDDIT_OAUTH_CLIENT_SECRET = environ["NS_OAUTH_CLIENT_SECRET"]
+REDDIT_USERNAME = environ["NS_REDDIT_USERNAME"]
+REDDIT_PASSWORD = environ["NS_REDDIT_PASSWORD"]
 
 TASK_DELAY = timedelta(minutes=10)
 HN_TOP_STORIES = 30
-REDDIT_USER_AGENT = "script:slothclient:1.0 (by /u/slothtron)"
-REDDIT_OAUTH_USER_AGENT = "django:squidscroll:1.0 (by /u/slothtron)"
 REDDIT_TOP_SUBMISSIONS = 100
 REDDIT_SCORING_TOP_TIME = "month"
 REDDIT_SCORING_TOP_LIMIT = 10
 REDDIT_SCORING_REFRESH_DELAY = timedelta(days=1)
 REDDIT_SCOPES = ["identity", "mysubreddits", "read"]
 
+DEBUG = False
+ALLOWED_HOSTS = ["squidscroll.com"]
+SECRET_KEY = environ["NS_SECRET_KEY"]
 WSGI_APPLICATION = "project.wsgi.application"
 ROOT_URLCONF = "project.urls"
 LANGUAGE_CODE = "en-us"
@@ -21,6 +40,7 @@ USE_TZ = True
 SITE_ID = 1
 STATIC_URL = "/static/"
 STATIC_ROOT = "dist/static"
+LOGGING_CONFIG = None
 
 CRYPTOGRAPHY_SALT = "noscroll"
 USERNAME_SALT = "noscroll"
@@ -39,6 +59,10 @@ AUTHENTICATION_BACKENDS = [
 
 SOCIALACCOUNT_PROVIDERS = {
     "reddit": {
+        "APP": {
+            "client_id": REDDIT_OAUTH_CLIENT_ID,
+            "secret": REDDIT_OAUTH_CLIENT_SECRET,
+        },
         "AUTH_PARAMS": {"duration": "permanent"},
         "SCOPE": REDDIT_SCOPES,
         "USER_AGENT": REDDIT_OAUTH_USER_AGENT,
@@ -58,7 +82,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "app.utils.PydanticJSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
@@ -123,35 +146,41 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "%(asctime)s.%(msecs)03dZ %(levelname)s [%(module)s] %(message)s",
-            "datefmt": "%Y-%m-%dT%H:%M:%S",
-            "converter": gmtime,
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "noscroll",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "127.0.0.1",
+        "USER": environ["NS_DB_USER"],
+        "PASSWORD": environ["NS_DB_PASS"],
+        "HOST": environ["NS_DB_HOST"],
         "PORT": "5432",
     }
 }
+
+if STAGE == "dev":
+    ALLOWED_HOSTS = []
+    DEBUG = True
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    INTERNAL_IPS = ["127.0.0.1"]
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"
+    LOGIN_REDIRECT_URL = LOGOUT_REDIRECT_URL = "http://localhost:3000/"
+
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
+        "app.utils.PydanticJSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ]
+
+    import logging
+
+    if not logging.getLogger().hasHandlers():
+        import coloredlogs
+
+        coloredlogs.install(
+            level=logging.DEBUG,
+            datefmt="%H:%M:%S",
+            fmt="%(asctime)s.%(msecs)d %(name)s %(levelname)s %(message)s",
+        )
+        logging.getLogger("django").setLevel(logging.INFO)
