@@ -16,7 +16,6 @@ RUN yarn install
 
 WORKDIR /noscroll
 COPY . ./
-RUN python manage.py collectstatic --no-input
 
 WORKDIR /noscroll/ui
 RUN yarn build
