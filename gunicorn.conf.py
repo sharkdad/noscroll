@@ -1,5 +1,5 @@
 wsgi_app = "project.wsgi"
-bind = ["127.0.0.1:8000"]
+bind = ["127.0.0.1:8001"]
 threads = 10
 
 logconfig_dict = {
