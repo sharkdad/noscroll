@@ -9,6 +9,8 @@ services:
     container_name: noscroll
     network_mode: host
     restart: unless-stopped
+    env_file:
+      - .env
     logging:
       driver: awslogs
       options:
