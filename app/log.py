@@ -34,6 +34,10 @@ class JSONFormatter(UTCFormatter):
         record.message = super().format(record)
         data = {k: v for k, v in vars(record).items() if k not in BAD_LOG_RECORD_ATTRS}
         data["asctime"] = self.formatTime(record)
+
+        if is_transient(record):
+            data["levelname"] = logging.getLevelName(logging.WARNING)
+
         return json.dumps(data, default=str)
 
 
@@ -44,10 +48,16 @@ class GunicornAccessLogJSONFormatter(UTCFormatter):
 
     def format(self, record):
         message = super().format(record)
+        levelname = (
+            logging.getLevelName(logging.WARNING)
+            if record.levelno > logging.WARNING
+            else record.levelname
+        )
+
         return json.dumps(
             dict(
                 name=record.name,
-                levelname=record.levelname,
+                levelname=levelname,
                 asctime=self.formatTime(record),
                 message=message,
                 method=record.args["m"],
@@ -57,3 +67,13 @@ class GunicornAccessLogJSONFormatter(UTCFormatter):
                 time_ms=record.args["M"],
             )
         )
+
+
+def is_transient(record: logging.LogRecord) -> bool:
+    if record.levelno <= logging.WARNING or record.exc_info is None:
+        return False
+    _, exc, _ = record.exc_info
+    msg = str(exc)
+    if msg == "received 503 HTTP response":
+        return True
+    return False
