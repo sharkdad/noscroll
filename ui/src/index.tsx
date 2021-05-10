@@ -25,14 +25,26 @@ function ErrorHandler() {
     )
   )
 
+  function report_error(error?: any, extra?: any): void {
+    service_client.current.report_error(error, extra)
+    set_is_error(true)
+  }
+
   useEffect(() => {
     window.addEventListener("error", (event) => {
       console.error(event)
-      set_is_error(true)
+      report_error(event?.error, {
+        event: {
+          message: event?.message,
+          filename: event?.filename,
+          lineno: event?.lineno,
+          colno: event?.colno,
+        },
+      })
     })
     window.addEventListener("unhandledrejection", (event) => {
       console.error(event)
-      set_is_error(true)
+      report_error(event?.reason)
     })
 
     $(error_toast.current).toast()
@@ -64,7 +76,7 @@ function ErrorHandler() {
 
   return (
     <>
-      <ErrorBoundary set_is_error={set_is_error}>
+      <ErrorBoundary report_error={report_error}>
         <ServiceClientContext.Provider value={service_client.current}>
           <Index />
         </ServiceClientContext.Provider>
@@ -130,13 +142,13 @@ function ErrorHandler() {
 }
 
 interface ErrorBoundaryProps {
-  set_is_error: (is_error: boolean) => void
+  report_error: (error?: any, extra?: any) => void
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
   componentDidCatch(error, errorInfo) {
     console.error(error, errorInfo)
-    this.props.set_is_error(true)
+    this.props.report_error(error, { errorInfo })
   }
 
   render() {

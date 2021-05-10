@@ -1,5 +1,6 @@
 from typing import Callable, Iterable, List
 import json
+import logging
 
 from django.contrib.messages import get_messages
 from django.db.models import Subquery
@@ -8,7 +9,7 @@ from praw import Reddit
 from praw.models import Submission
 from rest_framework.decorators import action
 from rest_framework.pagination import CursorPagination
-from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
@@ -37,7 +38,7 @@ def get_multi_feeds() -> Iterable[LocationFeed]:
 
 # pylint: disable=no-self-use
 class AppDetailsViewSet(ViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
     def list(self, request: Request):
         if request.user.is_authenticated:
@@ -50,6 +51,11 @@ class AppDetailsViewSet(ViewSet):
         return Response(
             AppDetails(request.user.is_authenticated, reddit_users, feeds, messages)
         )
+
+    @action(detail=False, methods=["put"])
+    def report_error(self, request):
+        logging.error(request.data.get("message"), extra=request.data.get("extra"))
+        return Response()
 
 
 # pylint: disable=no-self-use

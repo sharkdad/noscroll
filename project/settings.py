@@ -181,6 +181,6 @@ if STAGE == "dev":
         coloredlogs.install(
             level=logging.DEBUG,
             datefmt="%H:%M:%S",
-            fmt="%(asctime)s.%(msecs)d %(name)s %(levelname)s %(message)s",
+            fmt="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
         )
         logging.getLogger("django").setLevel(logging.INFO)

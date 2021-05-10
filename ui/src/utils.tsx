@@ -6,13 +6,33 @@ export const SVC_WEB_ROOT =
 export const ServiceClientContext = createContext<ServiceClient>(null)
 
 export class ServiceClient {
+  private next_error_report = Date.now()
+
   constructor(private set_slow_load: () => void, private clear_slow_load: () => void) {}
+
+  async report_error(error?: any, extra?: any): Promise<void> {
+    try {
+      const now = Date.now()
+      if (now >= this.next_error_report) {
+        this.next_error_report = now + 5000 + (Math.random() * 500)
+        const message = `${error?.message}\n${error?.stack}`
+        const init = this.build_put_request({ message, extra })
+        checkResponse(await fetch("/svc/api/app/report_error/", init))
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   async get(url: string, init?: RequestInit): Promise<Response> {
     return this.do_request(() => fetch(url, init))
   }
 
   async put(url: string, bodyJsonData: any, init?: RequestInit): Promise<Response> {
+    return this.do_request(() => fetch(url, this.build_put_request(bodyJsonData, init)))
+  }
+
+  private build_put_request(bodyJsonData: any, init?: RequestInit): RequestInit {
     if (init == null) {
       init = {}
     }
@@ -25,7 +45,7 @@ export class ServiceClient {
       init.body = JSON.stringify(bodyJsonData)
     }
     init.method = "PUT"
-    return this.do_request(() => fetch(url, init))
+    return init
   }
 
   private async do_request(request: () => Promise<Response>): Promise<Response> {
@@ -39,7 +59,7 @@ export class ServiceClient {
         const response = await request()
         checkResponse(response)
         return response
-      })
+      }, { reportError: (err) => this.report_error(err) })
     } finally {
       clearTimeout(timeout)
       if (was_slow) {
@@ -75,12 +95,14 @@ export interface RetryOptions {
   exponentialBackoffLimit: number
   initialDelayMs: number
   maxJitterMs: number
+  reportError: (err: any) => any
 }
 
 const defaultRetryOptions: RetryOptions = {
   exponentialBackoffLimit: 4,
   initialDelayMs: 500,
   maxJitterMs: 500,
+  reportError: function() {},
 }
 
 export function delay(timeMs: number): Promise<void> {
@@ -98,6 +120,7 @@ export async function retry<T>(
       return await thing()
     } catch (err) {
       console.error(err)
+      options.reportError(err)
       const baseDelay =
         Math.pow(2, exponentialBackoff) * effectiveOptions.initialDelayMs
       const jitter = Math.random() * effectiveOptions.maxJitterMs
