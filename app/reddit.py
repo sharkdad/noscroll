@@ -109,7 +109,7 @@ def get_reddit() -> Reddit:
 
 
 def sync_feeds():
-    Feed.objects.get_or_create(feed_type=FeedType.REDDIT_FRONT_PAGE)
+    #Feed.objects.get_or_create(feed_type=FeedType.REDDIT_FRONT_PAGE)
     for multi in get_reddit().user.me().multireddits():
         Feed.objects.get_or_create(
             feed_type=FeedType.REDDIT_MULTI,
@@ -130,16 +130,17 @@ def sync_top_submissions():
         else:
             raise Exception("Unknown feed type %s" % feed.feed_type)
         for submission in source.hot(limit=settings.REDDIT_TOP_SUBMISSIONS):
-            link = write_submission(reddit, all_scoring, submission)
-            link.feeds.add(feed)
+            write_submission(reddit, all_scoring, submission, feed)
     logging.info("Finshed syncing top reddit submissions")
 
 
-def write_submission(reddit, all_scoring, submission) -> Link:
+def write_submission(reddit, all_scoring, submission, feed): 
     scoring = get_or_create_relative_scoring(
         all_scoring, reddit, submission.subreddit.display_name
     )
     relative_score = (submission.score / scoring.score) * 1000
+    if relative_score < 100:
+        return
     metadata = get_submission_metadata(submission.__dict__)
     link, created = Link.objects.get_or_create(
         reddit_id=submission.id,
@@ -163,7 +164,7 @@ def write_submission(reddit, all_scoring, submission) -> Link:
             update_fields.append("metadata")
         if update_fields:
             link.save(update_fields=update_fields)
-    return link
+    link.feeds.add(feed)
 
 
 def get_submission_metadata(data: Mapping) -> Mapping:
